@@ -6,7 +6,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Plus, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
@@ -48,11 +49,13 @@ import AttendanceIcon from "./assets/components/AttendanceIcon";
 import Notifications from "./pages/Notifications";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
 import { RouteErrorFallback } from "./components/ui/resilience";
-import { Avatar, AvatarFallback } from "./components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { ThemeContext } from "./providers/ThemeProvider";
 import { cn } from "./lib/utils";
+import useAuth from "./hooks/useAuth";
+import { getUser } from "./api/userApi";
 import logo from "./assets/konn3ct_logo.png";
 import {
   DropdownMenu,
@@ -183,6 +186,31 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
 function DashboardTopbar({ onMenuClick }) {
   const { theme, setTheme } = useContext(ThemeContext);
   const { t } = useTranslation();
+  const { user: authUser, logout } = useAuth();
+  const profileQuery = useQuery({
+    queryKey: ["profile"],
+    queryFn: getUser,
+  });
+
+  const profileUser = profileQuery.data?.user ?? {};
+  const fallbackName = authUser?.name ?? "";
+  const firstName = profileUser.firstname ?? profileUser.firstName ?? "";
+  const lastName = profileUser.lastname ?? profileUser.lastName ?? "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  const displayName = fullName || fallbackName || authUser?.username || "User";
+  const displayEmail = profileUser.email ?? authUser?.email ?? authUser?.username ?? "";
+  const displayImage =
+    profileUser.profile_photo_url ??
+    authUser?.profile_photo_url ??
+    authUser?.avatar ??
+    authUser?.picture ??
+    "";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
 
   return (
     <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-surface px-4 lg:px-6 w-full">
@@ -227,14 +255,17 @@ function DashboardTopbar({ onMenuClick }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-transparent hover:ring-brand-green/20 transition-all focus:outline-none">
-              <AvatarFallback className="bg-gradient-to-br from-brand-blue to-brand-green text-white text-xs font-bold shadow-sm">AD</AvatarFallback>
+              {displayImage ? <AvatarImage src={displayImage} alt={displayName} /> : null}
+              <AvatarFallback className="bg-gradient-to-br from-brand-blue to-brand-green text-white text-xs font-bold shadow-sm">
+                {initials}
+              </AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 mt-1 rounded-xl">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">Admin User</p>
-                <p className="text-xs leading-none text-muted-foreground">admin@konn3ct.com</p>
+                <p className="text-sm font-medium leading-none">{displayName}</p>
+                <p className="text-xs leading-none text-muted-foreground">{displayEmail}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -252,7 +283,10 @@ function DashboardTopbar({ onMenuClick }) {
             </Link>
             <DropdownMenuSeparator />
             <Link to="/login">
-              <DropdownMenuItem className="cursor-pointer py-2 px-3 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 focus:text-red-500 focus:bg-red-50">
+              <DropdownMenuItem
+                className="cursor-pointer py-2 px-3 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 focus:text-red-500 focus:bg-red-50"
+                onClick={logout}
+              >
                 <LogOut className="mr-3 h-4 w-4" />
                 <span>{t("app.sidebar.logout", "Log out")}</span>
               </DropdownMenuItem>

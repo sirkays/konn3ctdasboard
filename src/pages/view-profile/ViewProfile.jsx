@@ -46,7 +46,7 @@ const tabs = [
   { id: "about", label: "About", icon: UserRound },
 ];
 
-function ViewProfile() {
+function ViewProfile({ embedded = false }) {
   const [activeTab, setActiveTab] = useState("about");
   const [selectedSession, setSelectedSession] = useState(sessions[0].id);
   const [selectedTime, setSelectedTime] = useState(1);
@@ -57,26 +57,40 @@ function ViewProfile() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
-      <header className="border-b border-border/80 bg-background/95 px-4 py-5 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
-        <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-4">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            aria-label="Back to dashboard home"
-            title="Back to dashboard home"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back to Dashboard</span>
-          </Link>
-          <Link to="/" aria-label="Go to dashboard" className="shrink-0">
-            <img src={logo} alt="Konn3ct logo" className="h-8 w-auto" />
-          </Link>
-          <div className="w-[136px]" aria-hidden="true" />
-        </div>
-      </header>
+    <div
+      className={cn(
+        "text-foreground transition-colors duration-300",
+        embedded ? "w-full" : "min-h-screen bg-background"
+      )}
+    >
+      {!embedded && (
+        <header className="border-b border-border/80 bg-background/95 px-4 py-5 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:px-6">
+          <div className="mx-auto flex max-w-[1120px] items-center justify-between gap-4">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              aria-label="Back to dashboard home"
+              title="Back to dashboard home"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back to Dashboard</span>
+            </Link>
+            <Link to="/" aria-label="Go to dashboard" className="shrink-0">
+              <img src={logo} alt="Konn3ct logo" className="h-8 w-auto" />
+            </Link>
+            <div className="w-[136px]" aria-hidden="true" />
+          </div>
+        </header>
+      )}
 
-      <main className="mx-auto flex min-h-[calc(100vh-74px)] w-full max-w-[1120px] flex-col px-3 pb-10 pt-6 sm:px-5 md:pt-7">
+      <main
+        className={cn(
+          "mx-auto flex w-full max-w-[1120px] flex-col",
+          embedded
+            ? "px-0 pb-0 pt-0"
+            : "min-h-[calc(100vh-74px)] px-3 pb-10 pt-6 sm:px-5 md:pt-7"
+        )}
+      >
         <Card className="rounded-[24px] border-border/70 bg-card px-5 py-6 shadow-[0_8px_24px_hsl(var(--foreground)/0.06)] sm:px-8 md:px-9">
           <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col items-center gap-4 text-center lg:flex-row lg:items-center lg:text-left">
@@ -141,7 +155,12 @@ function ViewProfile() {
           </div>
         </Card>
 
-        <Card className="mt-4 flex flex-1 flex-col rounded-[24px] border-border/70 bg-card px-3 py-3 shadow-[0_8px_24px_hsl(var(--foreground)/0.05)] sm:mt-5 sm:px-4 sm:py-4 md:px-5 md:py-5">
+        <Card
+          className={cn(
+            "flex flex-1 flex-col rounded-[24px] border-border/70 bg-card px-3 py-3 shadow-[0_8px_24px_hsl(var(--foreground)/0.05)] sm:px-4 sm:py-4 md:px-5 md:py-5",
+            embedded ? "mt-5" : "mt-4 sm:mt-5"
+          )}
+        >
           <div className="border-b border-border/70 px-1">
             <div className="grid grid-cols-3">
               {tabs.map((tab) => {
@@ -185,9 +204,11 @@ function ViewProfile() {
         </Card>
       </main>
 
-      <footer className="border-t border-border/80 px-4 py-5 text-center text-[13px] text-muted-foreground">
-        <p>&copy; 2025 Newwaves ecosystem. All rights reserved.</p>
-      </footer>
+      {!embedded && (
+        <footer className="border-t border-border/80 px-4 py-5 text-center text-[13px] text-muted-foreground">
+          <p>&copy; 2025 Newwaves ecosystem. All rights reserved.</p>
+        </footer>
+      )}
     </div>
   );
 }

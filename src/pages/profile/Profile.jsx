@@ -4,13 +4,14 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
-import { User, Lock, Monitor, ChevronRight, Shield, Computer, Copy } from "lucide-react";
+import { User, Lock, Monitor, ChevronRight, Shield, Computer, Copy, Eye } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getSessions, getUser, logoutSession } from "../../api/userApi";
 import { capitalize } from "../../lib/utils";
 import { useToast } from "../../hooks/use-toast";
 import { Skeleton } from "../../components/ui/skeleton";
 import { getReferralCodeFromRecord, getReferralLinkFromRecord } from "../../lib/referral";
+import ViewProfile from "../view-profile/ViewProfile";
 
 // --- Profile Section ---
 const ProfileSection = () => {
@@ -230,12 +231,13 @@ const Profile = () => {
     { id: "profile",  icon: User,    title: t("profile.tabs.info", "Profile"), description: "Manage your personal information" },
     { id: "security", icon: Shield,  title: t("profile.tabs.password", "Security"), description: "Password and authentication" },
     { id: "sessions", icon: Monitor, title: t("profile.tabs.sessions", "Sessions"), description: "Manage active devices" },
+    { id: "view-profile", icon: Eye, title: "View Profile", description: "Preview your public profile experience" },
   ];
 
   return (
     <div className="flex flex-col gap-8 pb-10 w-full max-w-5xl mx-auto">
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Settings</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Profile</h1>
         <p className="text-muted-foreground mt-1">Manage your account preferences and profile.</p>
       </div>
 
@@ -278,6 +280,7 @@ const Profile = () => {
           {activeSection === "profile" && <ProfileSection />}
           {activeSection === "security" && <SecuritySection />}
           {activeSection === "sessions" && <SessionsSection />}
+          {activeSection === "view-profile" && <ViewProfile embedded />}
         </div>
       </div>
     </div>

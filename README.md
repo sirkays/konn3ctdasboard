@@ -1,309 +1,163 @@
 # Konn3ct Dashboard Frontend
 
-Konn3ct Dashboard Frontend is the React single-page application that powers the browser dashboard for Konn3ct users. It covers authentication, rooms, livestreaming, recordings, plans and payments, add-ons, donations onboarding, attendance reporting, event pre-registration, and profile management.
+This repository is the React dashboard frontend for Konn3ct. It includes authentication, protected dashboard pages, room management, streaming, recordings, plans and payments, donations onboarding, attendance reporting, event registration, profile settings, and a public join-room flow.
 
-## Latest Updates
+## What Is Running Today
 
-The current codebase includes these recent product and architecture updates:
+- React 18 with Create React App
+- React Router using `createBrowserRouter`
+- React Query for page-level data fetching and mutations
+- Tailwind CSS with custom UI primitives in `src/components/ui`
+- `i18next` for translations
+- Google, Facebook, and Apple social auth wiring
+- Theme switching through `ThemeProvider`
 
-- Internationalization is now wired into the app runtime with `i18next`, `react-i18next`, browser language detection, and translation loading from `public/locales/{{lng}}/common.json`.
-- The translation layer is actively used in the navbar, login, register, join-room, settings, attendance, rooms, payments, donations, events, and shared resilience UI.
-- The app bootstrap now includes global resilience wrappers:
-  - `GlobalErrorBoundary`
-  - `GlobalNetworkGuard`
-  - `RouteErrorFallback`
-- Theme handling has been upgraded to support `light`, `dark`, and `system` modes through `ThemeProvider`, with live system-theme syncing and `meta[name="theme-color"]` updates.
-- The settings page has been rebuilt around the new appearance controls and currently exposes the theme selector as the live settings surface.
-- Registration now supports country-aware phone number entry and validation using `libphonenumber-js`.
-- Registration also preserves referral codes from query params and session storage before passing normalized referral data to the backend.
-- The public join-room screen has been made responsive and now builds the final meeting URL via `buildJoinMeetingUrl(sessionToken)`.
-- The navbar has updated mobile behavior, translation support, and clearer separation between guest and authenticated actions.
+## App Entry Flow
 
-## High-Level Scope
+The runtime starts in [src/index.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/index.js) and wraps the app in this order:
 
-### Included in this repository
+1. `ThemeProvider`
+2. `GoogleOAuthProvider`
+3. `QueryClientProvider`
+4. `AuthProvider`
+5. `GlobalErrorBoundary`
+6. `GlobalNetworkGuard`
+7. `App`
+8. `Toaster`
 
-- Public auth and meeting-join screens
-- Authenticated dashboard routes
-- UI state, route protection, theming, and request orchestration
-- Feature-specific API wrappers under `src/api/`
-- Client-side export and print flows
-- Static deployment config for Docker and nginx
+Routing lives in [src/App.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/App.js).
 
-### Handled externally
+Public routes:
 
-- Token issuance and backend authorization
-- Business APIs for rooms, streams, recordings, plans, payments, donations, attendance, and events
-- Google, Facebook, and Apple identity providers
-- Paystack checkout
-- Attendance AI summary/highlight/minutes generation
-- Recording playback and asset delivery
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/join`
+- `/view-profile`
 
-## Runtime Architecture
+Protected routes:
 
-### App bootstrap
+- `/`
+- `/rooms`
+- `/profile`
+- `/streams`
+- `/recordings`
+- `/payments`
+- `/addons`
+- `/referees`
+- `/donations`
+- `/attendance`
+- `/attendance-details/:meeting_id/:identifier`
+- `/events/*`
+- `/events/participants/:reference`
+- `/history`
+- `/history/new`
+- `/settings`
+- `/notifications`
+- `/dashboard/schedule/new`
+- `/dashboard/rooms/new`
 
-`src/index.js` composes the live runtime in this order:
+Protected pages render through `IsAuthenticated`, which checks the user loaded from `localStorage` by `AuthProvider`.
 
-```text
-ReactDOM.createRoot
-|
-+-- ThemeProvider
-    |
-    +-- GoogleOAuthProvider
-        |
-        +-- QueryClientProvider
-            |
-            +-- AuthProvider
-                |
-                +-- GlobalErrorBoundary
-                    |
-                    +-- GlobalNetworkGuard
-                        |
-                        +-- App
-                        +-- Toaster
-```
+## Data and API Flow
 
-### Route structure
+The main API client is [src/api/index.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/api/index.js).
 
-`src/App.js` uses `createBrowserRouter` and separates public routes from authenticated dashboard routes.
+- Base URL comes from `REACT_APP_BASE_URL`
+- The bearer token is read from `localStorage`
+- Most feature modules under `src/api/` use this shared client
 
-```text
-/
-|
-+-- Public
-|   +-- /login
-|   +-- /register
-|   +-- /forgot-password
-|   +-- /join
-|
-+-- Protected via IsAuthenticated
-    +-- /                      Dashboard
-    +-- /profile
-    +-- /rooms
-    +-- /streams
-    +-- /recordings
-    +-- /payments
-    +-- /addons
-    +-- /referees
-    +-- /donations
-    +-- /attendance
-    +-- /attendance-details/:meeting_id/:identifier
-    +-- /events/*
-    +-- /events/participants/:reference
-    +-- /history
-    +-- /settings
-```
+There are two notable exceptions:
 
-### Route and auth flow
+- [src/api/authService.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/api/authService.js) uses `axios` directly with `REACT_APP_BASE_URL`
+- [src/api/attendanceApi.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/api/attendanceApi.js) uses `fetch` against `REACT_APP_API_BOT` for attendance AI endpoints
 
-```text
-Browser request
-      |
-      v
-createBrowserRouter route match
-      |
-      +--> Public route? --------------------> Render page directly
-      |
-      +--> Protected route
-              |
-              v
-       IsAuthenticated
-              |
-              +--> user in localStorage -> AuthProvider hydrates user -> render layout
-              |
-              +--> no user and not loading -> navigate("/login")
-```
+Join-room flow:
 
-## Core Data Flow
+1. `/join` submits to `joinRoom` in `src/api/roomsApi.js`
+2. Numeric room names post to `/join-room`
+3. Non-numeric room names post to `/kv4/join-room`
+4. The returned session token is passed to `buildJoinMeetingUrl`
+5. The final meeting URL is built from `REACT_APP_JOIN_MEETING_URL`
 
-Most feature pages follow the same pattern:
+## Main Feature Areas
 
-```text
-Page component in src/pages/
-        |
-        v
-Feature API module in src/api/
-        |
-        v
-Shared axios client (src/api/index.js)
-        |
-        +-- baseURL = REACT_APP_BASE_URL
-        +-- Authorization: Bearer <token> from localStorage
-        |
-        v
-Backend response
-        |
-        v
-React Query cache or component state
-        |
-        v
-Rendered dashboard UI
-```
+- Auth: email/password login, registration, forgot password, social login
+- Dashboard: profile summary, room stats, upcoming meetings, quick actions
+- Rooms: list, create, start, join, transfer, limits, access code, banner upload
+- Streaming: stream creation and stop actions
+- Recordings: list, playback links, download links, delete actions
+- Payments and add-ons: plan purchase flows using Paystack
+- Donations: individual and business verification flows
+- Attendance: meeting attendance list, participant detail view, exports, AI summary/highlights/minutes
+- Events: event creation, participant export, reminders
+- Profile: profile editing, password update, active sessions, referral display
+- Settings: language and theme selection
 
-Attendance AI is a special case:
+## Environment Variables In Use
 
-```text
-Attendance details page
-        |
-        v
-native fetch
-        |
-        v
-REACT_APP_API_BOT
-        |
-        +-- /summary
-        +-- /highlights
-        +-- /minutes
-```
+This is a CRA app, so every `REACT_APP_*` value is bundled client-side.
 
-## Current Feature Flows
+Core API and app URLs:
 
-### Authentication
+- `REACT_APP_BASE_URL`
+- `REACT_APP_BASE_BACKENED_URL`
+- `REACT_APP_API_BOT`
+- `REACT_APP_JOIN_MEETING_URL`
+- `REACT_APP_LANDING_URL`
+- `REACT_APP_SITE_URL`
 
-- `AuthProvider` hydrates `user` from `localStorage`.
-- Login and social login call `src/api/authService.js`.
-- Successful auth stores both `user` and `token` in `localStorage`.
-- Protected dashboard routes depend on `IsAuthenticated`.
-- Google social login fetches user details from `REACT_APP_GOOGLE_USERINFO_URL` before calling the backend social-login endpoint.
-- Apple and Facebook login rely on their respective SDK hooks.
+Social auth and SDKs:
 
-### Registration
+- `REACT_APP_CLIENT_ID`
+- `REACT_APP_GOOGLE_USERINFO_URL`
+- `REACT_APP_FACEBOOK_APP_ID`
+- `REACT_APP_FACEBOOK_SDK_URL`
+- `REACT_APP_APPLE_CLIENT_ID`
+- `REACT_APP_APPLE_REDIRECT_URI`
+- `REACT_APP_APPLE_SIGNIN_SDK_URL`
 
-- `src/pages/auth/Register.jsx` validates passwords with Zod.
-- Country codes and example numbers come from `libphonenumber-js`.
-- Phone input is normalized to `+<country calling code><digits>` before submission.
-- Referral codes are read from URL params, mirrored into storage, normalized, and sent as both `referral` and `ref` when present.
+Payments and media:
 
-### Public join-room flow
+- `REACT_APP_PAYSTACK_KEY`
+- `REACT_APP_PLAYBACK_URL`
+- `REACT_APP_RECORDING_DOWNLOAD_BASE`
+- `REACT_APP_VIDEO_DOWNLOAD_BASE`
 
-```text
-/join form
-   |
-   v
-joinRoom(data)
-   |
-   +-- numeric roomName -----> POST /join-room   with { id, ...body }
-   |
-   +-- non-numeric roomName -> POST /kv4/join-room with { room, ...body }
-   |
-   v
-sessionToken returned
-   |
-   v
-buildJoinMeetingUrl(sessionToken)
-   |
-   v
-window.open(meetingUrl, "_blank")
-```
+Branding and links:
 
-### Settings and theming
+- `REACT_APP_PRIVACY_POLICY_URL`
+- `REACT_APP_FAVICON_URL`
+- `REACT_APP_OG_IMAGE_URL`
+- `REACT_APP_GETTING_STARTED_VIDEO_URL`
+- `REACT_APP_CONTACT_SALES_URL`
 
-- `ThemeProvider` persists the selected theme in `localStorage`.
-- `system` mode listens to `prefers-color-scheme`.
-- The root document gets the `dark` class only when the resolved theme is dark.
-- The settings screen currently exposes the appearance selector as the active settings experience.
+Optional document/font/analytics values referenced by `public/index.html`:
 
-### Rooms, streaming, recordings, payments, donations, attendance, and events
-
-- Rooms are managed through `src/api/roomsApi.js`.
-- Streaming uses feature-specific API modules and page-level React Query state.
-- Recordings build playback/download URLs from env-driven base paths.
-- Payments and add-ons integrate Paystack via the frontend public key.
-- Donations branch between individual and business verification flows based on backend state.
-- Attendance supports browser-side copy, CSV, Excel, print, and AI-generated meeting content.
-- Events support creation, participant exports, and reminder triggers.
-
-## Internationalization
-
-The app now boots translation support from `src/i18n/index.js`.
-
-- Backend loader path: `/locales/{{lng}}/common.json`
-- Detection order:
-  - query string
-  - `localStorage`
-  - browser navigator
-  - `<html>` tag
-- Language preference storage key: `konn3ct-language`
-- Current supported language in code: `en`
-
-Document language metadata is kept in sync:
-
-- `document.documentElement.lang`
-- `document.documentElement.dir`
+- `REACT_APP_GOOGLE_FONTS_PRECONNECT_URL`
+- `REACT_APP_GOOGLE_FONTS_STATIC_URL`
+- `REACT_APP_GOOGLE_FONTS_STYLESHEET_URL`
+- `REACT_APP_GOOGLE_ANALYTICS_SCRIPT_URL`
+- `REACT_APP_GOOGLE_ANALYTICS_ID`
 
 ## Project Structure
 
 ```text
-.
-|- public/
-|  |- index.html
-|  `- locales/
-|     `- en/common.json
-|- src/
-|  |- api/                    Feature API wrappers
-|  |- assets/                 Images, SVGs, icon components
-|  |- components/
-|  |  |- ui/                  Reusable UI primitives and resilience UI
-|  |  `- Navbar.jsx           Top navigation
-|  |- constants/
-|  |  `- languages.js         i18n language metadata
-|  |- hooks/                  Auth, theme, SDK, toast, mobile hooks
-|  |- i18n/
-|  |  `- index.js             i18next setup
-|  |- lib/                    Route guard, env links, helpers
-|  |- pages/                  Route-level pages
-|  |- providers/
-|  |  `- ThemeProvider.jsx
-|  |- App.js                  Router and authenticated layout
-|  `- index.js                Runtime bootstrap
-|- Dockerfile
-|- default.conf
-|- package.json
-`- README.md
+src/
+  api/           Feature API modules
+  assets/        Images, SVGs, icon components
+  components/    Shared UI and layout pieces
+  constants/     Static app constants
+  hooks/         Auth, theme, SDK, toast, mobile hooks
+  i18n/          Translation bootstrap
+  lib/           Route guard and helper utilities
+  pages/         Route-level screens
+  providers/     Global providers
+  App.js         Router
+  index.js       App bootstrap
+public/
+  locales/       Translation files
 ```
-
-## Environment Variables Used by the App
-
-This is a Create React App project, so all `REACT_APP_*` values are compiled into the client bundle.
-
-```env
-REACT_APP_BASE_BACKENED_URL=
-REACT_APP_BASE_URL=
-REACT_APP_API_BOT=
-REACT_APP_CLIENT_ID=
-REACT_APP_PAYSTACK_KEY=
-REACT_APP_PLAYBACK_URL=
-REACT_APP_FACEBOOK_APP_ID=
-REACT_APP_APPLE_CLIENT_ID=
-REACT_APP_APPLE_REDIRECT_URI=
-REACT_APP_LANDING_URL=
-REACT_APP_RECORDING_DOWNLOAD_BASE=
-REACT_APP_VIDEO_DOWNLOAD_BASE=
-REACT_APP_SITE_URL=
-REACT_APP_PRIVACY_POLICY_URL=
-REACT_APP_OG_IMAGE_URL=
-REACT_APP_FAVICON_URL=
-REACT_APP_GOOGLE_FONTS_PRECONNECT_URL=
-REACT_APP_GOOGLE_FONTS_STATIC_URL=
-REACT_APP_GOOGLE_FONTS_STYLESHEET_URL=
-REACT_APP_GOOGLE_ANALYTICS_SCRIPT_URL=
-REACT_APP_GOOGLE_ANALYTICS_ID=
-REACT_APP_APPLE_SIGNIN_SDK_URL=
-REACT_APP_GOOGLE_USERINFO_URL=
-REACT_APP_FACEBOOK_SDK_URL=
-REACT_APP_JOIN_MEETING_URL=
-REACT_APP_GETTING_STARTED_VIDEO_URL=
-REACT_APP_CONTACT_SALES_URL=
-```
-
-Key notes:
-
-- `REACT_APP_BASE_URL` drives the shared Axios client.
-- `REACT_APP_JOIN_MEETING_URL` is required to open joined meetings.
-- `REACT_APP_API_BOT` powers attendance summary, highlights, and minutes.
-- `REACT_APP_BASE_BACKENED_URL` is still referenced with its current spelling.
-- Values in `.env` are public in the final built bundle and must not be treated as secrets.
 
 ## Development
 
@@ -321,26 +175,32 @@ npm test
 
 ## Deployment
 
-The repository ships with a multi-stage Docker build:
+The repo includes:
 
-1. Build the frontend with `node:22-alpine`
-2. Serve the static `build/` output with `nginx:1.13.9-alpine`
+- `Dockerfile` for a multi-stage frontend build
+- `default.conf` for nginx SPA fallback with `try_files $uri $uri/ /index.html;`
 
-`default.conf` uses SPA fallback:
+## Inactive Or Placeholder Areas
 
-```nginx
-try_files $uri $uri/ /index.html;
-```
+These are the places I found that are inactive, static, or clearly placeholder-driven right now:
 
-## Known Notes
+- [src/pages/Notifications.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/Notifications.jsx): uses `mockNotifications` in component state and does not call any backend.
+- [src/pages/AttendanceUpgrade.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/AttendanceUpgrade.jsx): fully static sample attendance screen and not routed anywhere from `src/App.js`.
+- [src/pages/auth/Login.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/auth/Login.jsx): the SSO button only fires a toast and does not start a real SSO flow.
+- [src/pages/Settings.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/Settings.jsx): only the `general` tab is active; meeting, recording, audio, whiteboard, and scheduling tabs are commented out.
+- [src/pages/view-profile/profileData.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/view-profile/profileData.js): contains static sample profile content, fake session pricing, duplicate time slots, and social links pointing to `#`.
+- [src/pages/view-profile/ViewProfile.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/view-profile/ViewProfile.jsx): renders from the static `profileData.js` module rather than live API data.
+- [src/components/PricingCard.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/components/PricingCard.jsx): appears unused and contains test-style copy such as `A test Feature`.
+- [src/components/StatCard.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/components/StatCard.jsx): appears unused in the current routed UI.
+- [src/App.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/App.js): the topbar search input is present visually but has no search handler or query logic attached.
+- [src/App.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/App.js): topbar profile identity is hardcoded as `Admin User` and `admin@konn3ct.com`.
 
-- This is a frontend-only repository; business behavior depends on external services.
-- The settings page currently exposes appearance controls only.
-- The login SSO option is still a placeholder toast.
-- `src/pages/AttendanceUpgrade.jsx` exists but is not routed.
-- `socket.io-client` is installed but no active usage was found in the inspected runtime path.
-- A checked-in `.env` file exists in the repository, and client-side env values should be treated as public.
+## Notes Worth Cleaning Up Later
+
+- [src/api/userApi.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/api/userApi.js), [src/api/recordingApi.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/api/recordingApi.js), [src/lib/utils.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/lib/utils.js), and social auth pages still include debug `console.log` calls.
+- The repo uses both `REACT_APP_BASE_URL` and the misspelled `REACT_APP_BASE_BACKENED_URL`; both are live references.
+- A checked-in `.env` file exists, and these values should be treated as public client config, not secrets.
 
 ## Summary
 
-The current frontend is a React dashboard with a stronger runtime foundation than before: translation bootstrapping is in place, theme behavior is more complete, auth/public flows are better documented in code, and resilience wrappers now sit around the core application tree. This README has been updated to match that current architecture and to make the main runtime and request flows easier to understand at a glance.
+The core dashboard flows are wired and production-shaped, but there are still a few clearly demo or incomplete surfaces around notifications, SSO, settings expansion, and the public profile showcase page. This README is now aligned to the actual code paths that are active today.

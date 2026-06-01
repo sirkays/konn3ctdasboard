@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { 
-  Copy, Video, Calendar, Users, Clock, 
-  ArrowRight, Play, MoreVertical, 
-  CalendarDays, Share2, Globe, Lock, CreditCard
+import {
+  Copy, Video, Calendar, Users, Clock,
+  ArrowRight, Play,
+  CalendarDays, Lock, CreditCard
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,16 +18,15 @@ import {
   Card,
   CardContent,
 } from "../components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../components/ui/dialog";
 import { Skeleton } from "../components/ui/skeleton";
 import join from "../assets/icons/add-square.svg";
 import video from "../assets/icons/video-01.svg";
+
 const Dashboard = () => {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   const userQuery = useQueries({
     queries: [
@@ -51,10 +50,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleStartInstantMeeting = () => {
-    navigate('/rooms');
-  };
-
   if (userQuery.some((query) => query.isLoading)) {
     return (
       <div className="flex flex-col gap-8 pb-10">
@@ -72,14 +67,14 @@ const Dashboard = () => {
   const roomsData = userQuery[1]?.data;
   const meetingsData = userQuery[2]?.data?.data || [];
   const personalRoomId = roomsData?.personal_room?.id;
-  
+
   return (
     <div className="flex flex-col gap-8 pb-10">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-            {t("app.sidebar.home", `Welcome back, ${user?.firstname || "User"}`)} 👋
+            {"Hello, "}<p className="inline ml-2">{capitalize(user?.firstname || "User")} {"👋"}</p>
           </h1>
           <p className="text-muted-foreground mt-1 text-lg">
             Here's what's happening with your meetings today.
@@ -98,7 +93,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Stat Cards */}
         {[
           { title: t("dashboard.stats.totalRoom", "Total Rooms"), value: roomsData?.total_rooms ?? 0, icon: Users, color: "text-brand-blue", bg: "bg-brand-blue/10" },
           { title: t("dashboard.stats.activeRoom", "Active Rooms"), value: roomsData?.active_rooms ?? 0, icon: Calendar, color: "text-brand-green", bg: "bg-brand-green/10" },
@@ -125,11 +119,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Quick Actions / Schedule */}
         <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          
-
-
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Upcoming Meetings</h2>
             <Link to="/rooms">
@@ -173,13 +163,12 @@ const Dashboard = () => {
                       </Link>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </Card>
         </div>
 
-        {/* Right Column: Quick Start & Recent */}
         <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-700 delay-200">
           <Card className="rounded-2xl border-none bg-gradient-to-br from-brand-blue to-[#001D5C] text-white overflow-hidden relative shadow-xl">
             <div className="absolute top-[-20%] right-[-10%] w-[200px] h-[200px] rounded-full bg-white/10 blur-[40px] z-0" />
@@ -194,24 +183,25 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <Button
-                    onClick={() => navigate('/join')}
+                    onClick={() => navigate("/join")}
                     className="w-full bg-white text-brand-blue hover:bg-gray-100 h-12 rounded-xl font-bold transition-transform active:scale-95 px-2"
                   >
-                    <img src={join} alt="Join" className="w-4 h-4 mr-2" style={{ filter: 'brightness(0) saturate(100%) invert(18%) sepia(90%) saturate(2250%) hue-rotate(209deg) brightness(97%) contrast(105%)' }} />
+                    <img src={join} alt="Join" className="w-4 h-4 mr-2" style={{ filter: "brightness(0) saturate(100%) invert(18%) sepia(90%) saturate(2250%) hue-rotate(209deg) brightness(97%) contrast(105%)" }} />
                     Join
                   </Button>
                   <Button
-                    onClick={() => navigate('/rooms')}
+                    onClick={() => navigate("/rooms")}
                     className="w-full bg-brand-green text-white hover:bg-[#287854] h-12 rounded-xl font-bold transition-transform active:scale-95 px-2"
                   >
-                    <img src={video} alt="Host" className="w-4 h-4 mr-2" style={{ filter: 'brightness(0) invert(1)' }} />
+                    <img src={video} alt="Host" className="w-4 h-4 mr-2" style={{ filter: "brightness(0) invert(1)" }} />
                     Host
                   </Button>
                 </div>
-                
+
                 <Button
-                  onClick={() => navigate('/dashboard/schedule/new')}
-                  variant="outline" className="w-full border-white/20 text-white hover:bg-white/10 h-12 rounded-xl bg-transparent hover:text-white"
+                  onClick={() => navigate("/dashboard/schedule/new")}
+                  variant="outline"
+                  className="w-full border-white/20 text-white hover:bg-white/10 h-12 rounded-xl bg-transparent hover:text-white"
                 >
                   <CalendarDays className="w-4 h-4 mr-2" />
                   Schedule for later
@@ -251,9 +241,9 @@ const Dashboard = () => {
                     <h4 className="text-sm font-semibold text-foreground truncate">{item.title}</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">Quick Action</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 p-0 text-muted-foreground hover:text-brand-blue"
                   >
                     <ArrowRight className="w-4 h-4" />
