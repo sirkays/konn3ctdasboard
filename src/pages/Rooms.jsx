@@ -190,9 +190,13 @@ const Rooms = () => {
   }
 
   const roomsData = roomQuery.data ?? {};
-  const meetingData = meetingQuery.data ?? [];
+  const meetingData = meetingQuery.data;
   const rooms = Array.isArray(roomsData.rooms) ? roomsData.rooms : [];
-  const scheduledMeetings = Array.isArray(meetingData) ? meetingData : [];
+  const scheduledMeetings = Array.isArray(meetingData)
+    ? meetingData
+    : Array.isArray(meetingData?.data)
+      ? meetingData.data
+      : [];
   const totalRooms = Number.isFinite(Number(roomsData.total_rooms)) && Number(roomsData.total_rooms) >= 0 ? Number(roomsData.total_rooms) : rooms.length;
   const activeRooms = Number.isFinite(Number(roomsData.active_rooms)) && Number(roomsData.active_rooms) >= 0 ? Number(roomsData.active_rooms) : 0;
   const inactiveRooms = Math.max(0, totalRooms - activeRooms);
