@@ -12,7 +12,7 @@ import {
 } from "../../components/ui/form";
 import { Input } from "../../components/ui/input";
 import useAuth from "../../hooks/useAuth";
-import { Eye, EyeOff, Search } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "../../components/ui/card";
 import SideDetail from "./SideDetail";
@@ -83,22 +83,24 @@ export default function Register() {
   useFacebookSDK();
 
   return (
-    <div className="page container mx-auto flex flex-col justify-center px-4 sm:flex-row md:flex-col lg:flex-row lg:px-0">
-      <SideDetail className="md:hidden lg:flex" />
-      <Card className="w-full max-w-md flex-1 sm:max-w-[560px] md:max-w-md lg:max-w-[560px]">
-        <RegisterForm />
-        <p className="px-2 text-center text-xs text-[#0A2540] dark:text-white sm:text-sm">
-          {t("auth.termsPrefix")}{" "}
-          <a
-            href={privacyPolicyUrl}
-            className="text-blue-500 underline dark:text-blue-400"
-            rel="noreferrer"
-            target="_blank"
-          >
-            {t("auth.privacyLinkLabel")}
-          </a>
-        </p>
-      </Card>
+    <div className="flex min-h-screen overflow-x-clip bg-background text-foreground transition-colors duration-300">
+      <main className="flex min-h-screen min-w-0 w-full justify-center px-5 py-10 sm:px-10 lg:w-[52%] lg:px-12">
+        <Card className="w-[calc(100vw-2.5rem)] min-w-0 max-w-[560px] self-center border-0 bg-transparent p-0 shadow-none sm:w-full">
+          <RegisterForm />
+          <p className="mt-8 text-center text-xs leading-5 text-muted-foreground">
+            {t("auth.termsPrefix")}{" "}
+            <a
+              href={privacyPolicyUrl}
+              className="font-medium text-[#207450] underline underline-offset-2 dark:text-green-300"
+              rel="noreferrer"
+              target="_blank"
+            >
+              {t("auth.privacyLinkLabel")}
+            </a>
+          </p>
+        </Card>
+      </main>
+      <SideDetail variant="auth" className="lg:sticky lg:top-0 lg:h-screen" />
     </div>
   );
 }
@@ -390,33 +392,35 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="px-4 sm:px-20 md:px-8 lg:px-20">
-      <div className="mb-6 flex justify-center">
-        <img src={logo} alt="konn3ct" className="h-10 sm:h-auto" />
+    <div>
+      <div className="mb-8">
+        <img src={logo} alt="konn3ct" className="h-10" />
       </div>
-      <h3 className="mb-6 text-center text-lg font-bold sm:text-xl">
-        {t("auth.register.title")}
-      </h3>
-      <p className="mb-8 text-center text-base font-medium sm:text-xl">
-        {t("common.continueWith")}
+      <h1 className="text-3xl font-bold tracking-tight text-foreground">
+        Create your account
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Start connecting with your team in minutes
       </p>
 
-      <div className="flex flex-wrap justify-center gap-6 sm:justify-evenly sm:gap-0 md:gap-4 lg:gap-0">
-        <div
-          className="flex cursor-pointer flex-col items-center justify-center gap-y-1"
+      <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <button
+          type="button"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
           onClick={handleFacebookLogin}
         >
-          <img className="h-8" src={facebook} alt={t("common.facebook")} />
-          <p className="text-[10px] font-medium">{t("common.facebook")}</p>
-        </div>
+          <img className="h-5 w-5" src={facebook} alt="" />
+          <span>{t("common.facebook")}</span>
+        </button>
 
-        <div
-          className="flex cursor-pointer flex-col items-center justify-center gap-y-1"
+        <button
+          type="button"
+          className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
           onClick={() => handleGoogleLogin()}
         >
-          <img className="h-8" src={google} alt={t("common.google")} />
-          <p className="text-[10px] font-medium">{t("common.google")}</p>
-        </div>
+          <img className="h-5 w-5" src={google} alt="" />
+          <span>{t("common.google")}</span>
+        </button>
 
         {appleSdkReady ? (
           <AppleLogin
@@ -426,50 +430,54 @@ export function RegisterForm() {
             responseMode="query"
             usePopup={true}
             render={(renderProps) => (
-              <div
+              <button
+                type="button"
                 onClick={renderProps.onClick}
-                className="flex cursor-pointer flex-col items-center justify-center gap-y-1"
+                className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-muted/50"
               >
-                <img className="h-8" src={apple} alt={t("common.apple")} />
-                <p className="text-[10px] font-medium">{t("common.apple")}</p>
-              </div>
+                <img className="h-5 w-5 object-contain dark:invert" src={apple} alt="" />
+                <span>{t("common.apple")}</span>
+              </button>
             )}
             callback={(res) => {
               console.log("Apple response:", res);
             }}
           />
         ) : (
-          <div
+          <button
+            type="button"
             onClick={handleAppleUnavailable}
-            className="flex cursor-pointer flex-col items-center justify-center gap-y-1 opacity-60"
+            className="flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-background text-sm font-semibold text-foreground opacity-60"
           >
-            <img className="h-8" src={apple} alt={t("common.apple")} />
-            <p className="text-[10px] font-medium">{t("common.apple")}</p>
-          </div>
+            <img className="h-5 w-5 object-contain dark:invert" src={apple} alt="" />
+            <span>{t("common.apple")}</span>
+          </button>
         )}
       </div>
 
-      <div className="my-8 flex items-center justify-center">
-        <Separator className="h-[1px] flex-1 bg-black" />
-        <p className="mx-2 text-sm font-medium sm:text-base">{t("common.or")}</p>
-        <Separator className="h-[1px] flex-1 bg-black" />
+      <div className="my-7 flex items-center justify-center">
+        <Separator className="flex-1 bg-border" />
+        <p className="mx-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("common.or")}
+        </p>
+        <Separator className="flex-1 bg-border" />
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("auth.register.emailLabel")}
                 </FormLabel>
                 <FormControl>
                   <Input
                     type="email"
                     placeholder={t("auth.register.emailPlaceholder")}
-                    className="w-full rounded-full px-4"
+                    className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 text-foreground shadow-none focus-visible:ring-[#207450]"
                     {...field}
                   />
                 </FormControl>
@@ -483,7 +491,7 @@ export function RegisterForm() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("common.password")}
                 </FormLabel>
                 <FormControl>
@@ -491,13 +499,13 @@ export function RegisterForm() {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder={t("auth.register.passwordPlaceholder")}
-                      className="w-full rounded-full px-4"
+                      className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 pr-12 text-foreground shadow-none focus-visible:ring-[#207450]"
                       {...field}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-2 focus:outline-none"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
                     >
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
@@ -513,13 +521,13 @@ export function RegisterForm() {
             name="firstname"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("auth.register.firstName")}
                 </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t("auth.register.firstNamePlaceholder")}
-                    className="w-full rounded-full px-4"
+                    className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 text-foreground shadow-none focus-visible:ring-[#207450]"
                     {...field}
                   />
                 </FormControl>
@@ -533,13 +541,13 @@ export function RegisterForm() {
             name="lastname"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("auth.register.lastName")}
                 </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t("auth.register.lastNamePlaceholder")}
-                    className="w-full rounded-full px-4"
+                    className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 text-foreground shadow-none focus-visible:ring-[#207450]"
                     {...field}
                   />
                 </FormControl>
@@ -553,7 +561,7 @@ export function RegisterForm() {
             name="country_code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("auth.register.phone")}
                 </FormLabel>
                 <div className="flex gap-3">
@@ -566,7 +574,7 @@ export function RegisterForm() {
                             form.setValue("phone", "");
                           }}
                         >
-                        <SelectTrigger className="rounded-2xl">
+                        <SelectTrigger className="h-12 rounded-xl border-border bg-muted/30 shadow-none">
                           <span className="truncate text-foreground">
                             {selectedCountryLabel}
                           </span>
@@ -623,7 +631,7 @@ export function RegisterForm() {
                               selectedPhoneExample?.nationalNumber ||
                               "8166390205"
                             }
-                            className="w-full rounded-full px-4"
+                            className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 text-foreground shadow-none focus-visible:ring-[#207450]"
                             {...phoneField}
                             onChange={(event) => {
                               const digitsOnly = event.target.value
@@ -649,13 +657,13 @@ export function RegisterForm() {
             name="referral_code"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-bold text-[#0A2540] dark:text-white">
+                <FormLabel className="text-sm font-semibold text-foreground">
                   {t("auth.register.referralCode")}
                 </FormLabel>
                 <FormControl>
                   <Input
                     placeholder={t("auth.register.referralCodePlaceholder")}
-                    className="w-full rounded-full px-4"
+                    className="h-12 w-full rounded-xl border-border bg-muted/30 px-4 text-foreground shadow-none focus-visible:ring-[#207450]"
                     {...field}
                   />
                 </FormControl>
@@ -666,17 +674,18 @@ export function RegisterForm() {
 
           <Button
             type="submit"
-            className="w-full bg-[#012E89] shadow-md"
+            className="h-12 w-full rounded-xl bg-[#207450] text-base font-semibold text-white shadow-lg shadow-[#207450]/20 hover:bg-[#185f41]"
             disabled={registerMutation.isPending}
           >
             {t("auth.register.submit")}
+            <ArrowRight className="h-4 w-4" />
           </Button>
         </form>
       </Form>
 
-      <div className="my-4 flex justify-center gap-x-2 text-sm sm:text-base">
+      <div className="mt-7 flex justify-center gap-x-1.5 text-sm text-muted-foreground">
         <p>{t("auth.register.alreadyHaveAccount")}</p>
-        <Link to="/login" className="text-[#012E89] underline dark:text-blue-400">
+        <Link to="/login" className="font-semibold text-[#207450] hover:underline dark:text-green-300">
           {t("auth.register.signIn")}
         </Link>
       </div>

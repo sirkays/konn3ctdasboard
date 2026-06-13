@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, KeyRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
@@ -47,6 +47,7 @@ import DonationIcon from "./assets/components/DonationIcon";
 import SettingsIcon from "./assets/components/SettingsIcon";
 import AttendanceIcon from "./assets/components/AttendanceIcon";
 import Notifications from "./pages/Notifications";
+import ApiTokens from "./pages/ApiTokens";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
 import { RouteErrorFallback } from "./components/ui/resilience";
 import { Avatar, AvatarFallback, AvatarImage } from "./components/ui/avatar";
@@ -73,6 +74,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
 
   const items = [
     { titleKey: "app.sidebar.home", url: "/", icon: HomeIcon },
+    { titleKey: "app.sidebar.profile", url: "/profile", icon: UserIcon },
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
     { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
     {
@@ -95,7 +97,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     },
     { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
     { titleKey: "app.sidebar.history", url: "/history", icon: HistoryIcon },
-    { titleKey: "app.sidebar.profile", url: "/profile", icon: UserIcon },
+    { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
 
@@ -340,21 +342,11 @@ const router = createBrowserRouter([
     children: [
       {
         path: "login",
-        element: (
-          <>
-            <Navbar />
-            <Login />
-          </>
-        ),
+        element: <Login />,
       },
       {
         path: "register",
-        element: (
-          <>
-            <Navbar />
-            <Register />
-          </>
-        ),
+        element: <Register />,
       },
       {
         path: "forgot-password",
@@ -404,6 +396,7 @@ const router = createBrowserRouter([
           { path: "events/*", element: <Events /> },
           { path: "history", element: <InviteHistory /> },
           { path: "history/new", element: <NewInvite /> },
+          { path: "api-tokens", element: <ApiTokens /> },
           { path: "settings", element: <Settings /> },
           { path: "notifications", element: <Notifications /> },
         ],

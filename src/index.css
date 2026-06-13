@@ -134,6 +134,16 @@
   body {
     @apply min-h-screen antialiased bg-background text-foreground transition-colors duration-300;
   }
+
+  select option,
+  select optgroup {
+    @apply bg-white text-black;
+  }
+
+  .dark select option,
+  .dark select optgroup {
+    @apply bg-black text-white;
+  }
 }
 
 body {

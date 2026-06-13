@@ -313,7 +313,7 @@ const Recordings = () => {
                     {openDropdownId === rec.recordID && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} />
-                        <div className="absolute right-0 top-8 w-40 rounded-xl border border-border/60 bg-surface shadow-lg z-50 overflow-hidden animate-in zoom-in-95 duration-150">
+                        <div className="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-xl border border-border/60 bg-white text-black shadow-lg animate-in zoom-in-95 duration-150 dark:bg-black dark:text-white">
                           <div className="p-1.5">
                             <button 
                               onClick={() => handleDeleteClick(rec.recordID)} 

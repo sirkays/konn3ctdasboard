@@ -139,7 +139,7 @@ const Navbar = () => {
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div className="space-y-4 border-t border-border bg-background px-5 py-4 text-foreground shadow-md transition-colors duration-300 lg:hidden">
+        <div className="space-y-4 border-t border-border bg-white px-5 py-4 text-black shadow-md transition-colors duration-300 dark:bg-black dark:text-white lg:hidden">
           <Link className="block" to={`${process.env.REACT_APP_LANDING_URL}/Features`}>
             {t("app.navbar.solutions")}
           </Link>

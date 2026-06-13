@@ -27,6 +27,9 @@ import { Textarea } from "../components/ui/textarea";
 const getTimezones = () =>
   Intl.supportedValuesOf("timeZone").map((timezone) => timezone);
 const getRoomFallbackLabel = (id) => `Room ${id}`;
+const createEventSelectClassName =
+  "flex h-11 w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30 [color-scheme:light] dark:[color-scheme:dark]";
+const createEventOptionClassName = "bg-background text-foreground";
 
 const CreateEvents = () => {
   const { t } = useTranslation();
@@ -253,17 +256,17 @@ const CreateEvents = () => {
                     value={formData.room}
                     onChange={handleChange}
                     disabled={roomLoading}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={`${createEventSelectClassName} disabled:cursor-not-allowed disabled:opacity-50`}
                     required
                   >
-                    <option value="">
+                    <option className={createEventOptionClassName} value="">
                       {roomLoading
                         ? t("events.create.states.loadingRooms", "Loading rooms...")
                         : t("events.create.fields.selectRoom", "Choose a room")}
                     </option>
                     {Array.isArray(rooms) &&
                       rooms.map((room) => (
-                        <option key={room.id} value={room.id}>
+                        <option className={createEventOptionClassName} key={room.id} value={room.id}>
                           {room.room_name || room.name || room.label || getRoomFallbackLabel(room.id)}
                         </option>
                       ))}
@@ -338,12 +341,12 @@ const CreateEvents = () => {
                     name="timezone"
                     value={formData.timezone}
                     onChange={handleChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30"
+                    className={createEventSelectClassName}
                     required
                   >
-                    <option value="">{t("events.create.placeholders.selectTimezone", "Select Timezone")}</option>
+                    <option className={createEventOptionClassName} value="">{t("events.create.placeholders.selectTimezone", "Select Timezone")}</option>
                     {timezones.map((timezone) => (
-                      <option key={timezone} value={timezone}>{timezone}</option>
+                      <option className={createEventOptionClassName} key={timezone} value={timezone}>{timezone}</option>
                     ))}
                   </select>
                 </div>
@@ -364,10 +367,10 @@ const CreateEvents = () => {
                     name="free"
                     value={formData.free}
                     onChange={handleChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30"
+                    className={createEventSelectClassName}
                   >
-                    <option value="1">{t("events.create.eventTypes.free", "Free")}</option>
-                    <option value="0">{t("events.create.eventTypes.paid", "Paid")}</option>
+                    <option className={createEventOptionClassName} value="1">{t("events.create.eventTypes.free", "Free")}</option>
+                    <option className={createEventOptionClassName} value="0">{t("events.create.eventTypes.paid", "Paid")}</option>
                   </select>
                 </div>
 
@@ -378,10 +381,10 @@ const CreateEvents = () => {
                     value={formData.currency}
                     onChange={handleChange}
                     disabled={formData.free === "1"}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30 disabled:opacity-50"
+                    className={`${createEventSelectClassName} disabled:opacity-50`}
                   >
-                    <option value="NGN">NGN</option>
-                    <option value="USD">USD</option>
+                    <option className={createEventOptionClassName} value="NGN">NGN</option>
+                    <option className={createEventOptionClassName} value="USD">USD</option>
                   </select>
                 </div>
 
@@ -411,13 +414,13 @@ const CreateEvents = () => {
                     name="reminder"
                     value={formData.reminder}
                     onChange={handleChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30"
+                    className={createEventSelectClassName}
                     required
                   >
-                    <option value="">{t("events.create.placeholders.selectReminder", "Select Reminder")}</option>
-                    <option value="2">{t("events.create.reminders.twoDays", "2 Days before")}</option>
-                    <option value="1">{t("events.create.reminders.oneDay", "1 Day before")}</option>
-                    <option value="0.5">{t("events.create.reminders.twelveHours", "12 Hours before")}</option>
+                    <option className={createEventOptionClassName} value="">{t("events.create.placeholders.selectReminder", "Select Reminder")}</option>
+                    <option className={createEventOptionClassName} value="2">{t("events.create.reminders.twoDays", "2 Days before")}</option>
+                    <option className={createEventOptionClassName} value="1">{t("events.create.reminders.oneDay", "1 Day before")}</option>
+                    <option className={createEventOptionClassName} value="0.5">{t("events.create.reminders.twelveHours", "12 Hours before")}</option>
                   </select>
                 </div>
               </div>

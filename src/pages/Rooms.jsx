@@ -316,7 +316,7 @@ const Rooms = () => {
                     {openDropdownId === room.id && (
                       <>
                         <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenDropdownId(null); }} />
-                        <div className="absolute right-0 top-8 w-48 rounded-xl border border-border/60 bg-surface shadow-lg z-50 overflow-hidden animate-in zoom-in-95 duration-150">
+                        <div className="absolute right-0 top-8 z-50 w-48 overflow-hidden rounded-xl border border-border/60 bg-white text-black shadow-lg animate-in zoom-in-95 duration-150 dark:bg-black dark:text-white">
                           <div className="p-1.5 space-y-0.5">
                             <button onClick={() => { setSelectedRoomId(room.id); setOpenAccessDialog(true); setOpenDropdownId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-black/[0.04]">
                               <LockKeyhole className="h-4 w-4 text-muted-foreground" /> {t("rooms.manageMenu.accessCode", "Access Code")}

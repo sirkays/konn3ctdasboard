@@ -57,7 +57,7 @@ export function SelectContent({ children, className }) {
   return (
     <div
       className={cn(
-        "absolute z-10 mt-1 w-full rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg",
+        "absolute z-10 mt-1 w-full rounded-md border border-border bg-white p-1 text-black shadow-lg dark:bg-black dark:text-white",
         className
       )}
     >
