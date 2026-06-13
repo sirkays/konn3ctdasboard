@@ -55,8 +55,24 @@ const meetingHasAccessCode = (meeting) =>
     meeting?.accesscode ?? meeting?.accessCode ?? meeting?.access_code ?? meeting?.room_accesscode ?? meeting?.roomAccessCode
   );
 
-const getRoomAccessCodeValue = (room, storedAccessCodes = {}) =>
-  room?.accesscode ?? room?.accessCode ?? room?.access_code ?? storedAccessCodes[String(room?.id)] ?? "";
+const isCopyableAccessCode = (accessCode) =>
+  typeof accessCode === "string" && Boolean(accessCode.trim()) && accessCode !== "__LOCKED__";
+
+const getRoomAccessCodeValue = (room, storedAccessCodes = {}) => {
+  const apiAccessCode = room?.accesscode ?? room?.accessCode ?? room?.access_code;
+  const storedAccessCode = storedAccessCodes[String(room?.id)];
+
+  if (isCopyableAccessCode(apiAccessCode)) return apiAccessCode;
+  if (isCopyableAccessCode(storedAccessCode)) return storedAccessCode;
+  return apiAccessCode ?? storedAccessCode ?? "";
+};
+
+const generateAccessCode = (length = 8) => {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const randomValues = new Uint32Array(length);
+  window.crypto.getRandomValues(randomValues);
+  return Array.from(randomValues, (value) => characters[value % characters.length]).join("");
+};
 
 const updateRoomAccessCodeCache = (queryClient, roomId, nextAccessCode) => {
   queryClient.setQueryData(["rooms"], (previousData) => {
@@ -113,6 +129,12 @@ const Rooms = () => {
       navigator.clipboard.writeText(meeting_url);
       toast({ description: t("rooms.toasts.linkCopied") });
     }
+  };
+
+  const handleCopyAccessCode = (accessCode) => {
+    if (!isCopyableAccessCode(accessCode)) return;
+    navigator.clipboard.writeText(accessCode);
+    toast({ description: t("rooms.toasts.accessCodeCopied", "Access code copied to clipboard") });
   };
 
   const deleteMeetingMutation = useMutation({
@@ -200,6 +222,8 @@ const Rooms = () => {
   const totalRooms = Number.isFinite(Number(roomsData.total_rooms)) && Number(roomsData.total_rooms) >= 0 ? Number(roomsData.total_rooms) : rooms.length;
   const activeRooms = Number.isFinite(Number(roomsData.active_rooms)) && Number(roomsData.active_rooms) >= 0 ? Number(roomsData.active_rooms) : 0;
   const inactiveRooms = Math.max(0, totalRooms - activeRooms);
+  const selectedRoom = rooms.find((room) => String(room.id) === String(selectedRoomId));
+  const selectedRoomAccessCode = getRoomAccessCodeValue(selectedRoom, storedRoomAccessCodes);
 
   const colors = [
     "from-brand-blue to-blue-500",
@@ -348,7 +372,20 @@ const Rooms = () => {
                   </span>
                   <span className="w-1 h-1 rounded-full bg-border" />
                   {isLocked ? (
-                    <span className="flex items-center gap-1 text-red-500"><Lock className="h-3 w-3" /> Locked</span>
+                    <span className="flex items-center gap-1 text-red-500">
+                      <Lock className="h-3 w-3" /> Locked
+                      {isCopyableAccessCode(roomAccessCode) && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyAccessCode(roomAccessCode)}
+                          className="ml-1 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-brand-green/10 hover:text-brand-green"
+                          title={t("rooms.actions.copyAccessCode", "Copy access code")}
+                          aria-label={t("rooms.actions.copyAccessCode", "Copy access code")}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </span>
                   ) : (
                     <span className="flex items-center gap-1 text-brand-green"><Globe className="h-3 w-3" /> Open</span>
                   )}
@@ -404,7 +441,13 @@ const Rooms = () => {
       </Dialog>
 
       {/* Management Dialogs */}
-      <AccessCodeDialog open={openAccessDialog} setOpen={setOpenAccessDialog} roomId={selectedRoomId} mutation={manageAccessCodeMutation} />
+      <AccessCodeDialog
+        open={openAccessDialog}
+        setOpen={setOpenAccessDialog}
+        roomId={selectedRoomId}
+        currentAccessCode={selectedRoomAccessCode}
+        mutation={manageAccessCodeMutation}
+      />
       <LimitUserDialog open={openLimitDialog} setOpen={setOpenLimitDialog} roomId={selectedRoomId} mutation={limitUserMutation} />
       <BannerUploadDialog open={openBannerDialog} setOpen={setOpenBannerDialog} roomId={selectedRoomId} mutation={bannerUploadMutation} />
       <TransferRoomDialog open={openTransferDialog} setOpen={setOpenTransferDialog} roomId={selectedRoomId} mutation={transferRoomMutation} />
@@ -436,32 +479,59 @@ export default Rooms;
 
 /* ---------------- Manage Dialog Components ---------------- */
 
-const AccessCodeDialog = ({ open, setOpen, roomId, mutation }) => {
+const AccessCodeDialog = ({ open, setOpen, roomId, currentAccessCode, mutation }) => {
   const { t } = useTranslation();
-  const formSchema = z.object({ type: z.enum(["auto", "manual", "remove"]), accesscode: z.string().optional() });
-  const form = useForm({ resolver: zodResolver(formSchema), defaultValues: { type: "auto", accesscode: "" } });
-  const onSubmit = (data) => { mutation.mutate({ id: String(roomId), ...data }); setOpen(false); };
+  const formSchema = z.object({
+    accesscode: z.string().trim().min(1, t("rooms.accessDialog.validation.required", "Enter or generate an access code")),
+  });
+  const form = useForm({ resolver: zodResolver(formSchema), defaultValues: { accesscode: "" } });
+
+  useEffect(() => {
+    if (open) {
+      form.reset({ accesscode: isCopyableAccessCode(currentAccessCode) ? currentAccessCode : "" });
+    }
+  }, [open, currentAccessCode, form]);
+
+  const onSubmit = (data) => {
+    mutation.mutate({ id: String(roomId), type: "manual", accesscode: data.accesscode.trim() });
+    setOpen(false);
+  };
+  const handleRemove = () => {
+    mutation.mutate({ id: String(roomId), type: "remove", accesscode: "" });
+    setOpen(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] md:max-w-md rounded-2xl">
         <DialogTitle>{t("rooms.accessDialog.title")}</DialogTitle>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <FormField control={form.control} name="type" render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t("rooms.accessDialog.typeLabel")}</FormLabel>
-                <FormControl><Input {...field} placeholder={t("rooms.accessDialog.typePlaceholder")} className="bg-black/[0.02] h-11" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
             <FormField control={form.control} name="accesscode" render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("rooms.accessDialog.accessCodeLabel")}</FormLabel>
+                <FormLabel>{t("rooms.accessDialog.accessCodeLabel", "Access Code")}</FormLabel>
                 <FormControl><Input {...field} placeholder={t("rooms.accessDialog.accessCodePlaceholder")} className="bg-black/[0.02] h-11" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
-            <Button type="submit" className="self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.save")}</Button>
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl h-10 px-5"
+                onClick={() => form.setValue("accesscode", generateAccessCode(), { shouldDirty: true, shouldValidate: true })}
+              >
+                {t("rooms.accessDialog.generate", "Generate code")}
+              </Button>
+              <div className="flex items-center gap-2">
+                {Boolean(currentAccessCode) && (
+                  <Button type="button" variant="outline" className="rounded-xl h-10 px-4 text-red-500 hover:text-red-500" onClick={handleRemove}>
+                    {t("rooms.accessDialog.remove", "Remove")}
+                  </Button>
+                )}
+                <Button type="submit" className="rounded-xl h-10 px-6">{t("common.actions.save")}</Button>
+              </div>
+            </div>
           </form>
         </Form>
       </DialogContent>
