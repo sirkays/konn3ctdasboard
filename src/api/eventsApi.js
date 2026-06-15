@@ -1,51 +1,67 @@
 import { api } from ".";
-const API = api;
 
-export const getPreRegList = async () => {
+const unwrapArray = (payload, keys = []) => {
+  if (Array.isArray(payload)) return payload;
+
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+
+  for (const key of keys) {
+    if (Array.isArray(payload?.data?.[key])) return payload.data[key];
+    if (Array.isArray(payload?.data?.[key]?.data)) return payload.data[key].data;
+  }
+
+  return [];
+};
+
+export const getEventList = async () => {
   try {
-    const res = await API.get("/pre-reg-list");
-    return res.data;
+    const res = await api.get("/event-list");
+    return unwrapArray(res.data, ["events"]);
   } catch (error) {
-    console.error("Error fetching pre-registration list:", error);
+    console.error("Error fetching event list:", error);
     throw error;
   }
 };
 
-// Fetch pre-registration summary
-export const getPreRegSummary = async () => {
+export const getEventSummary = async () => {
   try {
-    const res = await api.get("/pre-reg-summary");
-    // normalize
-    return res.data?.data || { events: 0, participants: 0 };
+    const res = await api.get("/event-summary");
+    const summary = res.data?.data ?? {};
+
+    return {
+      activeEvents: Number(summary.active_events ?? 0),
+      totalRegistrations: Number(summary.total_registrations ?? 0),
+    };
   } catch (error) {
-    console.error("Error fetching pre-registration summary:", error);
+    console.error("Error fetching event summary:", error);
     throw error;
   }
 };
 
-// ✅ Fetch participants by event reference, not ID
-export const getPreRegParticipants = async (reference) => {
+export const getEventParticipants = async (reference) => {
   try {
-    const res = await api.get(`/pre-reg-participants/${reference}`);
-    // some APIs return { data: [...] }, others return the array directly
-    return res.data?.data;
+    const res = await api.get(`/event-participants/${reference}`);
+    return unwrapArray(res.data, ["users", "participants"]);
   } catch (error) {
-    console.error("Failed to fetch participants:", error);
+    console.error("Failed to fetch event participants:", error);
     throw error;
   }
 };
 
 export const sendReminder = async (reference) => {
   try {
-    const res = await api.post(`/sendPreregReminder/${reference}`,{});
-    // some APIs return { data: [...] }, others return the array directly
+    const res = await api.post(`/sendPreregReminder/${reference}`, {});
     return res.data;
   } catch (error) {
     console.error("Failed to send Reminder:", error);
     throw error;
   }
 };
-
 
 export const createPreRegEvent = async (formData) => {
   try {
@@ -55,7 +71,7 @@ export const createPreRegEvent = async (formData) => {
       config.headers = { "Content-Type": "application/json" };
     }
 
-    const res = await API.post("/pre-reg", formData, config);
+    const res = await api.post("/pre-reg", formData, config);
     return res.data;
   } catch (error) {
     console.error("Error creating pre-registration event:", error);
@@ -70,13 +86,4 @@ export const getRooms = async () => {
   } catch (error) {
     throw error;
   }
-};
-
-export default {
-  getPreRegList,
-  getPreRegSummary,
-  getPreRegParticipants,
-  createPreRegEvent,
-  getRooms,
-  sendReminder
 };

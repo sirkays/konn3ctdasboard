@@ -366,7 +366,7 @@
     "actions": {
       "createRoom": "Create Room",
       "scheduleMeeting": "Schedule a Meeting",
-      "copyLink": "Copy Link",
+      "copyLink": "Copy Meeting Link",
       "manage": "Manage",
       "startMeeting": "Start Meeting"
     },

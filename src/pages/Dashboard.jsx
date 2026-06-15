@@ -4,12 +4,13 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Copy, Video, Calendar, Users, Clock,
   ArrowRight, Play,
-  CalendarDays, Lock, CreditCard
+  CalendarDays, Lock, CreditCard, BarChart3
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getUser } from "../api/userApi";
-import { getMeetings, getRooms } from "../api/roomsApi";
+import { getRooms } from "../api/roomsApi";
+import { getDashboardStats, getTodayMeetings } from "../api/dashboardApi";
 import useAuth from "../hooks/useAuth";
 import { useToast } from "../hooks/use-toast";
 import { capitalize } from "../lib/utils";
@@ -21,6 +22,30 @@ import {
 import { Skeleton } from "../components/ui/skeleton";
 import join from "../assets/icons/add-square.svg";
 import video from "../assets/icons/video-01.svg";
+
+const dashboardStatStyles = [
+  { icon: Users, color: "text-brand-blue", bg: "bg-brand-blue/10" },
+  { icon: Calendar, color: "text-brand-green", bg: "bg-brand-green/10" },
+  { icon: Play, color: "text-[#CC505C]", bg: "bg-[#CC505C]/10" },
+  { icon: Lock, color: "text-amber-500", bg: "bg-amber-500/10" },
+  { icon: BarChart3, color: "text-purple-500", bg: "bg-purple-500/10" },
+];
+
+const formatStatLabel = (key) =>
+  String(key)
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+
+const getNumericDashboardStats = (stats) =>
+  Object.entries(stats ?? {})
+    .filter(
+      ([, value]) =>
+        (typeof value === "number" || typeof value === "string") &&
+        value !== "" &&
+        Number.isFinite(Number(value))
+    )
+    .map(([key, value]) => ({ key, title: formatStatLabel(key), value: Number(value) }));
 
 const Dashboard = () => {
   const { t } = useTranslation();
@@ -37,7 +62,16 @@ const Dashboard = () => {
         cacheTime: 1000 * 60 * 30,
       },
       { enabled: isAuthenticated, queryKey: ["rooms"], queryFn: getRooms },
-      { enabled: isAuthenticated, queryKey: ["meetings"], queryFn: getMeetings },
+      {
+        enabled: isAuthenticated,
+        queryKey: ["dashboard-stats"],
+        queryFn: getDashboardStats,
+      },
+      {
+        enabled: isAuthenticated,
+        queryKey: ["today-meetings"],
+        queryFn: getTodayMeetings,
+      },
     ],
   });
 
@@ -65,7 +99,8 @@ const Dashboard = () => {
 
   const user = userQuery[0]?.data?.user;
   const roomsData = userQuery[1]?.data;
-  const meetingsData = userQuery[2]?.data?.data || [];
+  const dashboardStats = getNumericDashboardStats(userQuery[2]?.data);
+  const meetingsData = userQuery[3]?.data || [];
   const personalRoomId = roomsData?.personal_room?.id;
 
   return (
@@ -93,35 +128,41 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[
-          { title: t("dashboard.stats.totalRoom", "Total Rooms"), value: roomsData?.total_rooms ?? 0, icon: Users, color: "text-brand-blue", bg: "bg-brand-blue/10" },
-          { title: t("dashboard.stats.activeRoom", "Active Rooms"), value: roomsData?.active_rooms ?? 0, icon: Calendar, color: "text-brand-green", bg: "bg-brand-green/10" },
-          { title: t("dashboard.stats.inactiveRoom", "Inactive Rooms"), value: (roomsData?.total_rooms ?? 0) - (roomsData?.active_rooms ?? 0), icon: Play, color: "text-[#CC505C]", bg: "bg-[#CC505C]/10" },
-          { title: t("dashboard.stats.privateRoom", "Private Rooms"), value: roomsData?.private_rooms ?? 0, icon: Lock, color: "text-amber-500", bg: "bg-amber-500/10" }
-        ].map((stat, i) => (
-          <div key={i} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
-            <Card className="rounded-2xl border-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden relative group h-full bg-surface">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-border to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
-                    <h3 className="text-3xl font-bold text-foreground">{stat.value}</h3>
+        {dashboardStats.length === 0 ? (
+          <Card className="rounded-2xl border-border/60 bg-surface md:col-span-2 lg:col-span-4">
+            <CardContent className="p-6 text-center text-sm text-muted-foreground">
+              No dashboard statistics are available yet.
+            </CardContent>
+          </Card>
+        ) : dashboardStats.map((stat, i) => {
+          const style = dashboardStatStyles[i % dashboardStatStyles.length];
+          const StatIcon = style.icon;
+
+          return (
+            <div key={stat.key} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${i * 100}ms` }}>
+              <Card className="rounded-2xl border-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden relative group h-full bg-surface">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-border to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
+                      <h3 className="text-3xl font-bold text-foreground">{stat.value}</h3>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full ${style.bg} flex items-center justify-center`}>
+                      <StatIcon className={`w-6 h-6 ${style.color}`} />
+                    </div>
                   </div>
-                  <div className={`w-12 h-12 rounded-full ${stat.bg} flex items-center justify-center`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ))}
+                </CardContent>
+              </Card>
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Upcoming Meetings</h2>
+            <h2 className="text-xl font-bold text-foreground">Today's Meetings</h2>
             <Link to="/rooms">
               <Button variant="ghost" className="text-brand-green hover:text-brand-green-soft hover:bg-brand-green/10 rounded-lg">
                 View Calendar <ArrowRight className="ml-2 w-4 h-4" />
@@ -132,7 +173,7 @@ const Dashboard = () => {
           <Card className="rounded-2xl border-border bg-surface shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
             <div className="divide-y divide-border">
               {meetingsData.length === 0 ? (
-                <div className="p-5 flex justify-center text-muted-foreground text-sm">No upcoming meetings scheduled.</div>
+                <div className="p-5 flex justify-center text-muted-foreground text-sm">No meetings scheduled for today.</div>
               ) : meetingsData.slice(0, 5).map((meeting, i) => {
                 const dotColor = ["bg-brand-blue", "bg-brand-green", "bg-amber-400"][i % 3];
 

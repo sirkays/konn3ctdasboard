@@ -3,7 +3,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { cn } from "../../lib/utils";
-import gradientBackground from "../../assets/ChatGPT Image Jun 13, 2026, 02_05_01 AM.png";
+import gradientBackground from "../../assets/login-gradient.png";
 
 const SideDetail = ({ className, variant = "features" }) => {
   const { t } = useTranslation();

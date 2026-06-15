@@ -15,7 +15,7 @@ import {
   Mail
 } from "lucide-react";
 
-import { getPreRegParticipants, sendReminder } from "../api/eventsApi";
+import { getEventParticipants, sendReminder } from "../api/eventsApi";
 import { useToast } from "../hooks/use-toast";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -170,8 +170,8 @@ const EventParticipants = () => {
     const fetchParticipants = async () => {
       try {
         setLoading(true);
-        const response = await getPreRegParticipants(reference);
-        setParticipants(response?.users || []);
+        const response = await getEventParticipants(reference);
+        setParticipants(response);
       } catch (error) {
         console.error("Error fetching participants:", error);
       } finally {

@@ -13,7 +13,7 @@ import {
   CalendarDays
 } from "lucide-react";
 
-import { getPreRegList, getPreRegSummary } from "../api/eventsApi";
+import { getEventList, getEventSummary } from "../api/eventsApi";
 import EventIcon from "../assets/components/EventIcon";
 import { useToast } from "../hooks/use-toast";
 import { Button } from "../components/ui/button";
@@ -47,18 +47,14 @@ const EventList = () => {
     try {
       setLoading(true);
       const [listResponse, summaryResponse] = await Promise.all([
-        getPreRegList(),
-        getPreRegSummary(),
+        getEventList(),
+        getEventSummary(),
       ]);
 
-      const eventList = Array.isArray(listResponse)
-        ? listResponse
-        : listResponse?.data?.data || [];
-
-      setEvents(eventList);
+      setEvents(listResponse);
       setSummary({
-        totalEvents: summaryResponse?.events || 0,
-        totalParticipants: summaryResponse?.participants || 0,
+        totalEvents: summaryResponse.activeEvents,
+        totalParticipants: summaryResponse.totalRegistrations,
       });
     } catch (error) {
       console.error("Error fetching events:", error);
@@ -110,36 +106,35 @@ const EventList = () => {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex w-full sm:w-auto items-center gap-2 rounded-xl bg-surface border border-border/60 p-2 shadow-sm">
-            <div className="px-3 py-1 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600">
+        <div className="flex w-full flex-col gap-4 sm:flex-row lg:w-auto">
+          <div className="grid w-full grid-cols-2 gap-2 rounded-2xl border border-border/60 bg-surface p-2 shadow-sm sm:w-auto">
+            <div className="flex min-w-[140px] items-center gap-3 rounded-xl px-3 py-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
                 <CalendarDays className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                   {t("events.list.summary.totalEvents", "Total Events")}
                 </p>
-                <p className="text-sm font-bold text-foreground leading-none mt-0.5">{summary.totalEvents}</p>
+                <p className="mt-1 text-xl font-bold leading-none text-foreground">{summary.totalEvents}</p>
               </div>
             </div>
-            <div className="h-8 w-px bg-border/60 mx-1" />
-            <div className="px-3 py-1 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+            <div className="flex min-w-[165px] items-center gap-3 rounded-xl border-l border-border/60 px-3 py-2">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
                 <Users className="h-4 w-4" />
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
                   {t("events.list.summary.totalParticipants", "Total Participants")}
                 </p>
-                <p className="text-sm font-bold text-foreground leading-none mt-0.5">{summary.totalParticipants}</p>
+                <p className="mt-1 text-xl font-bold leading-none text-foreground">{summary.totalParticipants}</p>
               </div>
             </div>
           </div>
 
           <Button
             onClick={() => navigate("/events/create")}
-            className="w-full sm:w-auto h-12 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] font-semibold transition-all"
+            className="h-auto min-h-12 w-full rounded-xl bg-brand-green font-semibold text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] transition-all hover:bg-[#287854] sm:w-auto"
           >
             <Plus className="mr-2 h-5 w-5" />
             {t("common.actions.create", "Create Event")}
