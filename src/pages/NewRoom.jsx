@@ -17,18 +17,17 @@ export default function NewRoom() {
 
   const [roomName, setRoomName] = useState("");
   const [url, setUrl] = useState("");
-  
-  // These are visually mapped but not sent to the backend
+  const [mode, setMode] = useState("meeting");
   const [privacy, setPrivacy] = useState("private");
-  const [color, setColor] = useState("from-brand-green to-emerald-400");
+  const [color, setColor] = useState("#10b981");
 
   const colors = [
-    { value: "from-brand-blue to-blue-500", label: "Blue", bgClass: "bg-blue-500" },
-    { value: "from-brand-green to-emerald-400", label: "Green", bgClass: "bg-[#10b981]" },
-    { value: "from-amber-500 to-orange-400", label: "Orange", bgClass: "bg-orange-500" },
-    { value: "from-purple-500 to-pink-400", label: "Purple", bgClass: "bg-purple-500" },
-    { value: "from-rose-500 to-red-400", label: "Red", bgClass: "bg-red-500" },
-    { value: "from-cyan-500 to-blue-400", label: "Cyan", bgClass: "bg-cyan-500" },
+    { value: "#3b82f6", label: "Blue", bgClass: "bg-blue-500" },
+    { value: "#10b981", label: "Green", bgClass: "bg-[#10b981]" },
+    { value: "#f97316", label: "Orange", bgClass: "bg-orange-500" },
+    { value: "#a855f7", label: "Purple", bgClass: "bg-purple-500" },
+    { value: "#ef4444", label: "Red", bgClass: "bg-red-500" },
+    { value: "#06b6d4", label: "Cyan", bgClass: "bg-cyan-500" },
   ];
 
   const handleNameChange = (e) => {
@@ -89,6 +88,9 @@ export default function NewRoom() {
     createMeetingMutation.mutate({
       name: roomName,
       url: url,
+      mode,
+      privacy: privacy === "private" ? 1 : 0,
+      color,
     });
   };
 
@@ -136,6 +138,30 @@ export default function NewRoom() {
                   placeholder={t("rooms.createForm.roomUrlPlaceholder", "design-critique")} 
                   className="h-11 bg-black/[0.02] flex-1" 
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Room Mode</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: "meeting", label: "Meeting", description: "Interactive room for all participants." },
+                  { value: "webinar", label: "Webinar", description: "Presenter-led room for an audience." },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setMode(option.value)}
+                    className={`rounded-xl border-2 p-4 text-left transition-all ${
+                      mode === option.value ? "border-brand-green bg-brand-green/5" : "border-border/60 hover:border-border"
+                    }`}
+                  >
+                    <span className={`text-sm font-bold ${mode === option.value ? "text-brand-green" : "text-foreground"}`}>
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{option.description}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </CardContent>
