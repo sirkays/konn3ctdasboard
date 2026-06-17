@@ -1,8 +1,8 @@
 import { api } from ".";
 
-export const getSchedules = async () => {
+export const getSchedules = async (params) => {
   try {
-    const res = await api.get("/schedule");
+    const res = await api.get("/schedule", { params });
     return res.data?.data ?? res.data;
   } catch (error) {
     throw error;

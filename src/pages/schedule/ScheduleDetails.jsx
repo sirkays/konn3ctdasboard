@@ -440,6 +440,7 @@ export default function ScheduleDetails() {
 
           <button
             type="button"
+            onClick={() => navigate("/rooms")}
             className="flex items-center gap-2 px-2 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground"
           >
             <Settings className="h-4 w-4" />

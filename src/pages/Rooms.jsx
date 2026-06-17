@@ -29,42 +29,39 @@ import {
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 const SCHEDULE_PANEL_TOP_OFFSET = "80px";
-const ROOM_ACCESS_CODE_STORAGE_KEY = "room-access-code-map";
 const ROOM_LOCK_TOOLTIP_ID = "room-lock-tooltip";
-
-const readStoredRoomAccessCodes = () => {
-  try {
-    const raw = localStorage.getItem(ROOM_ACCESS_CODE_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch (error) {
-    return {};
-  }
-};
-
-const writeStoredRoomAccessCodes = (value) => {
-  try {
-    localStorage.setItem(ROOM_ACCESS_CODE_STORAGE_KEY, JSON.stringify(value));
-  } catch (error) {
-    // Ignore storage failures
-  }
-};
-
-const meetingHasAccessCode = (meeting) =>
-  Boolean(
-    meeting?.accesscode ?? meeting?.accessCode ?? meeting?.access_code ?? meeting?.room_accesscode ?? meeting?.roomAccessCode
-  );
+const DEFAULT_ROOM_COLOR = "#10b981";
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 const isCopyableAccessCode = (accessCode) =>
   typeof accessCode === "string" && Boolean(accessCode.trim()) && accessCode !== "__LOCKED__";
 
-const getRoomAccessCodeValue = (room, storedAccessCodes = {}) => {
-  const apiAccessCode = room?.accesscode ?? room?.accessCode ?? room?.access_code;
-  const storedAccessCode = storedAccessCodes[String(room?.id)];
+const normalizeAccessCode = (accessCode) => {
+  if (accessCode == null) return "";
+  const value = String(accessCode).trim();
+  return ["attendance", "attendee"].includes(value.toLowerCase()) ? "" : value;
+};
 
-  if (isCopyableAccessCode(apiAccessCode)) return apiAccessCode;
-  if (isCopyableAccessCode(storedAccessCode)) return storedAccessCode;
-  return apiAccessCode ?? storedAccessCode ?? "";
+const getAccessCodeValue = (source) =>
+  normalizeAccessCode(
+    source?.password_attendee ??
+      source?.password_attendance ??
+      source?.passwordattendance ??
+      source?.passwordattendane ??
+      source?.accesscode ??
+      source?.accessCode ??
+      source?.access_code ??
+      source?.room_accesscode ??
+      source?.roomAccessCode
+  );
+
+const meetingHasAccessCode = (meeting) => Boolean(getAccessCodeValue(meeting));
+
+const getRoomAccessCodeValue = (room) => getAccessCodeValue(room);
+
+const getRoomColor = (room) => {
+  const color = String(room?.color ?? "").trim();
+  return HEX_COLOR_PATTERN.test(color) ? color : DEFAULT_ROOM_COLOR;
 };
 
 const generateAccessCode = (length = 8) => {
@@ -80,7 +77,9 @@ const updateRoomAccessCodeCache = (queryClient, roomId, nextAccessCode) => {
     return {
       ...previousData,
       rooms: previousData.rooms.map((room) =>
-        String(room.id) === String(roomId) ? { ...room, accesscode: nextAccessCode } : room
+        String(room.id) === String(roomId)
+          ? { ...room, password_attendee: nextAccessCode, accesscode: nextAccessCode }
+          : room
       ),
     };
   });
@@ -109,7 +108,6 @@ const Rooms = () => {
   const [openTransferDialog, setOpenTransferDialog] = useState(false);
 
   const [selectedRoomId, setSelectedRoomId] = useState(null);
-  const [storedRoomAccessCodes, setStoredRoomAccessCodes] = useState(() => readStoredRoomAccessCodes());
 
   useEffect(() => {
     if (!openDeleteDialog) setRoomIdToDelete(null);
@@ -161,13 +159,6 @@ const Rooms = () => {
       const roomId = String(variables.id);
       const nextAccessCode = variables.type === "remove" ? "" : variables.accesscode?.trim() || "__LOCKED__";
       updateRoomAccessCodeCache(queryClient, roomId, nextAccessCode);
-      setStoredRoomAccessCodes((previousValue) => {
-        const nextValue = { ...previousValue };
-        if (variables.type === "remove") delete nextValue[roomId];
-        else nextValue[roomId] = nextAccessCode;
-        writeStoredRoomAccessCodes(nextValue);
-        return nextValue;
-      });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast({ description: t("rooms.toasts.accessCodeUpdated") });
     },
@@ -223,14 +214,7 @@ const Rooms = () => {
   const activeRooms = Number.isFinite(Number(roomsData.active_rooms)) && Number(roomsData.active_rooms) >= 0 ? Number(roomsData.active_rooms) : 0;
   const inactiveRooms = Math.max(0, totalRooms - activeRooms);
   const selectedRoom = rooms.find((room) => String(room.id) === String(selectedRoomId));
-  const selectedRoomAccessCode = getRoomAccessCodeValue(selectedRoom, storedRoomAccessCodes);
-
-  const colors = [
-    "from-brand-blue to-blue-500",
-    "from-brand-green to-emerald-400",
-    "from-amber-500 to-orange-400",
-    "from-purple-500 to-pink-400"
-  ];
+  const selectedRoomAccessCode = getRoomAccessCodeValue(selectedRoom);
 
   return (
     <div className="flex flex-col gap-8 pb-10 px-4 sm:px-6 lg:px-[33px] animate-in fade-in duration-500">
@@ -304,19 +288,19 @@ const Rooms = () => {
 
       {/* Room Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {rooms.map((room, index) => {
-          const roomAccessCode = getRoomAccessCodeValue(room, storedRoomAccessCodes);
+        {rooms.map((room) => {
+          const roomAccessCode = getRoomAccessCodeValue(room);
           const isLocked = Boolean(roomAccessCode);
-          const color = colors[index % colors.length];
+          const roomColor = getRoomColor(room);
 
           return (
             <Card key={room.id} className="rounded-2xl border-border/60 bg-surface hover:shadow-lg hover:shadow-brand-blue/5 transition-all duration-300 group relative">
-              <div className={`h-1.5 w-full rounded-t-2xl bg-gradient-to-r ${color}`} />
+              <div className="h-1.5 w-full rounded-t-2xl" style={{ backgroundColor: roomColor }} />
               <CardContent className="p-5 space-y-4">
                 {/* Title Row */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${color} shadow-sm`}>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm" style={{ backgroundColor: roomColor }}>
                       <Video className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">

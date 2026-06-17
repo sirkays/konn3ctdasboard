@@ -92,7 +92,15 @@ const getScheduleInitialValues = (meeting) => {
   const source = meeting?.raw ?? meeting ?? {};
 
   return {
-    mode: String(meeting?.type ?? source.type ?? source.session_type ?? source.meeting_type ?? "meeting").toLowerCase().includes("webinar")
+    mode: String(
+      meeting?.type ??
+        source.shedule_type ??
+        source.schedule_type ??
+        source.type ??
+        source.session_type ??
+        source.meeting_type ??
+        "meeting"
+    ).toLowerCase().includes("webinar")
       ? "webinar"
       : "meeting",
     emails: getScheduleGuestList(meeting),
@@ -302,6 +310,7 @@ export default function NewSchedule() {
       totime: data.totime,
       timezone: data.timezone,
       guest,
+      shedule_type: mode,
     });
   };
 

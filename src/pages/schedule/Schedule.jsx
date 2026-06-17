@@ -27,7 +27,6 @@ import { useToast } from "../../hooks/use-toast";
 
 const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const SESSION_COLORS = ["bg-brand-green", "bg-brand-blue", "bg-amber-500", "bg-[#CC505C]"];
-const UPCOMING_PAGE_SIZE = 10;
 
 const parseMeetingDate = (value) => {
   if (!value) return null;
@@ -90,7 +89,13 @@ const isSameDay = (firstDate, secondDate) =>
   firstDate?.getDate() === secondDate?.getDate();
 
 const normalizeMeetings = (data) => {
-  const meetings = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  const meetings = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data?.data?.data)
+        ? data.data.data
+        : [];
 
   return meetings
     .map((meeting, index) => {
@@ -134,14 +139,35 @@ const normalizeMeetings = (data) => {
     });
 };
 
+const getSchedulePagination = (data, fallbackCount) => {
+  const source = data?.data && !Array.isArray(data.data) ? data.data : data;
+  const total = Number(source?.total);
+  const lastPage = Number(source?.last_page);
+  const current = Number(source?.current_page);
+
+  return {
+    total: Number.isFinite(total) ? total : fallbackCount,
+    totalPages: Number.isFinite(lastPage) ? lastPage : 1,
+    currentPage: Number.isFinite(current) ? current : 1,
+  };
+};
+
 export default function Schedule() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const meetingsQuery = useQuery({ queryKey: ["schedules"], queryFn: getSchedules });
-  const meetings = useMemo(() => normalizeMeetings(meetingsQuery.data), [meetingsQuery.data]);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [currentPage, setCurrentPage] = useState(1);
+  const meetingsQuery = useQuery({
+    queryKey: ["schedules", currentPage],
+    queryFn: () => getSchedules({ page: currentPage }),
+    keepPreviousData: true,
+  });
+  const meetings = useMemo(() => normalizeMeetings(meetingsQuery.data), [meetingsQuery.data]);
+  const schedulePagination = useMemo(
+    () => getSchedulePagination(meetingsQuery.data, meetings.length),
+    [meetings.length, meetingsQuery.data]
+  );
 
   const cancelScheduleMutation = useMutation({
     mutationFn: cancelSchedule,
@@ -193,9 +219,8 @@ export default function Schedule() {
 
   const weekStart = getMonday(selectedDate);
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
-  const totalPages = Math.max(1, Math.ceil(meetings.length / UPCOMING_PAGE_SIZE));
-  const pageStart = (currentPage - 1) * UPCOMING_PAGE_SIZE;
-  const paginatedMeetings = meetings.slice(pageStart, pageStart + UPCOMING_PAGE_SIZE);
+  const totalPages = Math.max(1, schedulePagination.totalPages);
+  const totalMeetings = schedulePagination.total;
 
   const hasSessionOnDate = (date) => meetings.some((meeting) => isSameDay(meeting.date, date));
 
@@ -312,7 +337,7 @@ export default function Schedule() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-extrabold text-foreground">Upcoming Sessions</h2>
-          <p className="text-base font-medium text-muted-foreground">{meetings.length} total</p>
+          <p className="text-base font-medium text-muted-foreground">{totalMeetings} total</p>
         </div>
 
         {meetingsQuery.isError ? (
@@ -333,9 +358,9 @@ export default function Schedule() {
           </Card>
         ) : (
           <div className="flex flex-col gap-5">
-            {paginatedMeetings.map((meeting, index) => {
+            {meetings.map((meeting, index) => {
               const { time, period } = splitFormattedTime(meeting.time);
-              const color = SESSION_COLORS[(pageStart + index) % SESSION_COLORS.length];
+              const color = SESSION_COLORS[index % SESSION_COLORS.length];
 
               return (
                 <Card
