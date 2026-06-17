@@ -185,7 +185,7 @@ The repo includes:
 These are the places I found that are inactive, static, or clearly placeholder-driven right now:
 
 - [src/pages/Notifications.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/Notifications.jsx): uses `mockNotifications` in component state and does not call any backend.
-- [src/pages/AttendanceUpgrade.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/AttendanceUpgrade.jsx): fully static sample attendance screen and not routed anywhere from `src/App.js`.
+- [src/pages/attendance/AttendanceUpgrade.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/attendance/AttendanceUpgrade.jsx): fully static sample attendance screen and not routed anywhere from `src/App.js`.
 - [src/pages/auth/Login.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/auth/Login.jsx): the SSO button only fires a toast and does not start a real SSO flow.
 - [src/pages/Settings.jsx](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/Settings.jsx): only the `general` tab is active; meeting, recording, audio, whiteboard, and scheduling tabs are commented out.
 - [src/pages/view-profile/profileData.js](/c:/Users/HP/Desktop/k_dashboard_frontend/src/pages/view-profile/profileData.js): contains static sample profile content, fake session pricing, duplicate time slots, and social links pointing to `#`.

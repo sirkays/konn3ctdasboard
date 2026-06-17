@@ -3,9 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { 
   ArrowLeft, 
-  Copy, 
-  Table as TableIcon, 
-  Printer, 
   Search, 
   BellRing, 
   Users, 
@@ -17,6 +14,7 @@ import {
 
 import { getEventParticipants, sendReminder } from "../api/eventsApi";
 import { useToast } from "../hooks/use-toast";
+import ExportActions from "../components/ExportActions";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
@@ -27,117 +25,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "../components/ui/pagination";
-
-function escapeHtml(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function downloadBlob(filename, blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function rowsToTSV(headers, rows) {
-  const headerLine = headers.join("\t");
-  const lines = rows.map((row) =>
-    headers.map((header) => row[header] ?? "").join("\t")
-  );
-  return [headerLine, ...lines].join("\n");
-}
-
-function rowsToCSV(headers, rows) {
-  const escapeValue = (value) => {
-    const stringValue = String(value ?? "");
-    const needsQuotes = /[",\n\r]/.test(stringValue);
-    const safeValue = stringValue.replaceAll('"', '""');
-    return needsQuotes ? `"${safeValue}"` : safeValue;
-  };
-
-  const headerLine = headers.map(escapeValue).join(",");
-  const lines = rows.map((row) =>
-    headers.map((header) => escapeValue(row[header])).join(",")
-  );
-
-  return [headerLine, ...lines].join("\n");
-}
-
-function rowsToExcelHTML(title, headers, rows) {
-  const thead = `<tr>${headers
-    .map((header) => `<th>${escapeHtml(header)}</th>`)
-    .join("")}</tr>`;
-
-  const tbody = rows
-    .map(
-      (row) =>
-        `<tr>${headers
-          .map((header) => `<td>${escapeHtml(row[header] ?? "")}</td>`)
-          .join("")}</tr>`
-    )
-    .join("");
-
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(title)}</title>
-</head>
-<body>
-  <h3>${escapeHtml(title)}</h3>
-  <table border="1" cellspacing="0" cellpadding="6">
-    <thead>${thead}</thead>
-    <tbody>${tbody}</tbody>
-  </table>
-</body>
-</html>`;
-}
-
-function printHTML(title, html) {
-  const printWindow = window.open(
-    "",
-    "_blank",
-    "noopener,noreferrer,width=900,height=700"
-  );
-  if (!printWindow) {
-    return;
-  }
-
-  printWindow.document.open();
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>${escapeHtml(title)}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
-          h1 { text-align: center; margin-bottom: 5px; }
-          .subtitle { text-align: center; margin-bottom: 30px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; }
-          th { background: #f3f3f3; }
-        </style>
-      </head>
-      <body>
-        <h1>Konn3ct</h1>
-        <p class="subtitle">${escapeHtml(title)}</p>
-        ${html.split('<body>')[1].split('</body>')[0]}
-        <script>
-          window.onload = function () { window.print(); };
-        </script>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-}
 
 const EventParticipants = () => {
   const { t } = useTranslation();
@@ -237,53 +124,6 @@ const EventParticipants = () => {
     setCurrentPage((page) => Math.min(page, totalPages));
   }, [totalPages]);
 
-  const handleCopy = async () => {
-    try {
-      const tsv = rowsToTSV(headers, filteredRows);
-      await navigator.clipboard.writeText(tsv);
-      toast({ description: t("events.participants.toasts.copied", "Copied to clipboard!") });
-    } catch (error) {
-      console.error(error);
-      toast({
-        description: t("events.participants.toasts.copyFailed", "Failed to copy."),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCSV = () => {
-    const csv = rowsToCSV(headers, filteredRows);
-    downloadBlob(
-      `participants-${reference || "export"}.csv`,
-      new Blob([csv], { type: "text/csv;charset=utf-8" })
-    );
-    toast({ description: t("events.participants.toasts.csvDownloaded", "CSV Downloaded") });
-  };
-
-  const handleExcel = () => {
-    const html = rowsToExcelHTML(
-      getParticipantsTitle(filteredRows.length),
-      headers,
-      filteredRows
-    );
-    downloadBlob(
-      `participants-${reference || "export"}.xls`,
-      new Blob([html], {
-        type: "application/vnd.ms-excel;charset=utf-8",
-      })
-    );
-    toast({ description: t("events.participants.toasts.excelDownloaded", "Excel Downloaded") });
-  };
-
-  const handlePrint = () => {
-    const html = rowsToExcelHTML(
-      getParticipantsTitle(filteredRows.length),
-      headers,
-      filteredRows
-    );
-    printHTML(t("events.participants.actions.print", "Print"), html);
-  };
-
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-100px)] w-full items-center justify-center">
@@ -333,24 +173,24 @@ const EventParticipants = () => {
               </>
             )}
           </Button>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopy} className="h-9 rounded-lg border-border/60">
-              <Copy className="mr-2 h-3.5 w-3.5" />
-              {t("events.participants.actions.copy", "Copy")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleCSV} className="h-9 rounded-lg border-border/60">
-              <TableIcon className="mr-2 h-3.5 w-3.5" />
-              CSV
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExcel} className="h-9 rounded-lg border-border/60">
-              <TableIcon className="mr-2 h-3.5 w-3.5" />
-              Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="h-9 rounded-lg border-border/60">
-              <Printer className="mr-2 h-3.5 w-3.5" />
-              Print
-            </Button>
-          </div>
+          <ExportActions
+            headers={headers}
+            rows={filteredRows}
+            title={getParticipantsTitle(filteredRows.length)}
+            filenameBase={`participants-${reference || "export"}`}
+            labels={{
+              copy: t("events.participants.actions.copy", "Copy"),
+              csv: t("events.participants.actions.csv", "CSV"),
+              excel: t("events.participants.actions.excel", "Excel"),
+              print: t("events.participants.actions.print", "Print"),
+            }}
+            toastMessages={{
+              copied: t("events.participants.toasts.copied", "Copied to clipboard!"),
+              copyFailed: t("events.participants.toasts.copyFailed", "Failed to copy."),
+              csvDownloaded: t("events.participants.toasts.csvDownloaded", "CSV Downloaded"),
+              excelDownloaded: t("events.participants.toasts.excelDownloaded", "Excel Downloaded"),
+            }}
+          />
         </div>
       </div>
 

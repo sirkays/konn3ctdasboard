@@ -3,10 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
-  Copy,
   FileText,
-  Table as TableIcon,
-  Printer,
   Search,
   MessageSquare,
   Sparkles,
@@ -22,182 +19,20 @@ import {
   getMeetingSummary,
   getMeetingHighlights,
   getMeetingMinutes,
-} from "../api/attendanceApi";
-import { useToast } from "../hooks/use-toast";
+} from "../../api/attendanceApi";
+import ExportActions from "../../components/ExportActions";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
-} from "../components/ui/pagination";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Input } from "../components/ui/input";
+} from "../../components/ui/pagination";
+import { Button } from "../../components/ui/button";
+import { Badge } from "../../components/ui/badge";
+import { Input } from "../../components/ui/input";
 
 const NAVBAR_HEIGHT = 72;
-
-function escapeHtml(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function downloadBlob(filename, blob) {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function rowsToTSV(headers, rows) {
-  const headerLine = headers.join("\t");
-  const lines = rows.map((row) =>
-    headers.map((header) => row[header] ?? "").join("\t")
-  );
-  return [headerLine, ...lines].join("\n");
-}
-
-function rowsToCSV(headers, rows) {
-  const escapeValue = (value) => {
-    const stringValue = String(value ?? "");
-    const needsQuotes = /[",\n\r]/.test(stringValue);
-    const safeValue = stringValue.replaceAll('"', '""');
-    return needsQuotes ? `"${safeValue}"` : safeValue;
-  };
-
-  const headerLine = headers.map(escapeValue).join(",");
-  const lines = rows.map((row) =>
-    headers.map((header) => escapeValue(row[header])).join(",")
-  );
-
-  return [headerLine, ...lines].join("\n");
-}
-
-function rowsToExcelHTML(title, headers, rows) {
-  const thead = `<tr>${headers
-    .map((header) => `<th>${escapeHtml(header)}</th>`)
-    .join("")}</tr>`;
-
-  const tbody = rows
-    .map(
-      (row) =>
-        `<tr>${headers
-          .map((header) => `<td>${escapeHtml(row[header] ?? "")}</td>`)
-          .join("")}</tr>`
-    )
-    .join("");
-
-  return `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(title)}</title>
-</head>
-<body>
-  <h3>${escapeHtml(title)}</h3>
-  <table border="1" cellspacing="0" cellpadding="6">
-    <thead>${thead}</thead>
-    <tbody>${tbody}</tbody>
-  </table>
-</body>
-</html>`;
-}
-
-function printTableLikePayments(
-  title,
-  headers,
-  rows,
-  footerLabel,
-  onPopupBlocked
-) {
-  const win = window.open("", "_blank", "width=900,height=700");
-
-  if (!win) {
-    onPopupBlocked?.();
-    return;
-  }
-
-  const thead = `<tr>${headers
-    .map((header) => `<th>${escapeHtml(header)}</th>`)
-    .join("")}</tr>`;
-
-  const tbody = rows
-    .map(
-      (row) =>
-        `<tr>${headers
-          .map((header) => `<td>${escapeHtml(row[header] ?? "")}</td>`)
-          .join("")}</tr>`
-    )
-    .join("");
-
-  win.document.write(`
-    <html>
-      <head>
-        <title>${escapeHtml(title)}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
-          h1 { text-align: center; margin-bottom: 5px; }
-          .subtitle { text-align: center; margin-bottom: 30px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 13px; }
-          th { background: #f3f3f3; }
-          .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #777; }
-        </style>
-      </head>
-      <body>
-        <h1>Konn3ct</h1>
-        <p class="subtitle">${escapeHtml(title)}</p>
-        <table>
-          <thead>${thead}</thead>
-          <tbody>${tbody}</tbody>
-        </table>
-        <div class="footer">
-          <p>${escapeHtml(footerLabel)}</p>
-        </div>
-        <script>
-          window.onload = function () { window.print(); };
-        </script>
-      </body>
-    </html>
-  `);
-
-  win.document.close();
-}
-
-async function copyToClipboard(text) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (error) {
-    // Continue to fallback.
-  }
-
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.top = "-9999px";
-    textarea.style.left = "-9999px";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const wasCopied = document.execCommand("copy");
-    document.body.removeChild(textarea);
-    return wasCopied;
-  } catch (error) {
-    return false;
-  }
-}
 
 const normalizeStatus = (status) => {
   if (!status) return "participant";
@@ -219,7 +54,6 @@ const ViewAttendance = () => {
   const { t } = useTranslation();
   const { meeting_id, identifier } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -227,7 +61,6 @@ const ViewAttendance = () => {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [copied, setCopied] = useState(false);
 
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelTitle, setPanelTitle] = useState("");
@@ -377,57 +210,6 @@ const ViewAttendance = () => {
     );
   }, [exportRows, search]);
 
-  const handleCopy = async () => {
-    const tsv = rowsToTSV(headers, filteredRows);
-    const wasCopied = await copyToClipboard(tsv);
-
-    if (wasCopied) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-      return;
-    }
-
-    toast({
-      description: t("attendance.details.toasts.copyFailed", "Failed to copy to clipboard."),
-      variant: "destructive",
-    });
-  };
-
-  const handleCSV = () => {
-    const csv = rowsToCSV(headers, filteredRows);
-    downloadBlob(
-      `attendance-${meeting_id || "export"}.csv`,
-      new Blob([csv], { type: "text/csv;charset=utf-8" })
-    );
-  };
-
-  const handleExcel = () => {
-    const html = rowsToExcelHTML(
-      getMeetingAttendanceTitle(filteredRows.length),
-      headers,
-      filteredRows
-    );
-
-    downloadBlob(
-      `attendance-${meeting_id || "export"}.xls`,
-      new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" })
-    );
-  };
-
-  const handlePrint = () => {
-    printTableLikePayments(
-      getMeetingAttendanceTitle(filteredRows.length),
-      headers,
-      filteredRows,
-      t("attendance.details.export.printFooter", "Generated by Konn3ct"),
-      () =>
-        toast({
-          description: t("attendance.details.toasts.allowPopups", "Please allow popups to print."),
-          variant: "destructive",
-        })
-    );
-  };
-
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-100px)] w-full items-center justify-center">
@@ -499,24 +281,25 @@ const ViewAttendance = () => {
               {t("attendance.details.actions.sendSummary", "AI Summary")}
             </Button>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopy} className="h-9 rounded-lg border-border/60">
-              <Copy className="mr-2 h-3.5 w-3.5" />
-              {copied ? t("attendance.details.actions.copied", "Copied!") : t("attendance.details.actions.copy", "Copy")}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleCSV} className="h-9 rounded-lg border-border/60">
-              <TableIcon className="mr-2 h-3.5 w-3.5" />
-              CSV
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExcel} className="h-9 rounded-lg border-border/60">
-              <TableIcon className="mr-2 h-3.5 w-3.5" />
-              Excel
-            </Button>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="h-9 rounded-lg border-border/60">
-              <Printer className="mr-2 h-3.5 w-3.5" />
-              Print
-            </Button>
-          </div>
+          <ExportActions
+            headers={headers}
+            rows={filteredRows}
+            title={getMeetingAttendanceTitle(filteredRows.length)}
+            filenameBase={`attendance-${meeting_id || "export"}`}
+            labels={{
+              copy: t("attendance.details.actions.copy", "Copy"),
+              copied: t("attendance.details.actions.copied", "Copied!"),
+              csv: t("attendance.details.actions.csv", "CSV"),
+              excel: t("attendance.details.actions.excel", "Excel"),
+              print: t("attendance.details.actions.print", "Print"),
+            }}
+            toastMessages={{
+              copyFailed: t("attendance.details.toasts.copyFailed", "Failed to copy to clipboard."),
+              allowPopups: t("attendance.details.toasts.allowPopups", "Please allow popups to print."),
+            }}
+            printFooter={t("attendance.details.export.printFooter", "Generated by Konn3ct")}
+            showCopiedState
+          />
         </div>
       </div>
 

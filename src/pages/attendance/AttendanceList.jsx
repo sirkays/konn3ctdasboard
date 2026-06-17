@@ -10,14 +10,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { getMeetings } from "../api/attendanceApi";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { getMeetings } from "../../api/attendanceApi";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
-} from "../components/ui/pagination";
+} from "../../components/ui/pagination";
 
 const AttendanceList = () => {
   const { t } = useTranslation();
