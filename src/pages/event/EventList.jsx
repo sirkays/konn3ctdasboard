@@ -13,22 +13,22 @@ import {
   CalendarDays
 } from "lucide-react";
 
-import { getEventList, getEventSummary } from "../api/eventsApi";
-import EventIcon from "../assets/components/EventIcon";
-import { useToast } from "../hooks/use-toast";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { getEventList, getEventSummary } from "../../api/eventsApi";
+import EventIcon from "../../assets/components/EventIcon";
+import { useToast } from "../../hooks/use-toast";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
-} from "../components/ui/pagination";
+} from "../../components/ui/pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
+} from "../../components/ui/dropdown-menu";
 
 const EventList = () => {
   const { t } = useTranslation();

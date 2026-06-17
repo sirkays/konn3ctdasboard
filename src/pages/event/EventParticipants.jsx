@@ -12,19 +12,19 @@ import {
   Mail
 } from "lucide-react";
 
-import { getEventParticipants, sendReminder } from "../api/eventsApi";
-import { useToast } from "../hooks/use-toast";
-import ExportActions from "../components/ExportActions";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
+import { getEventParticipants, sendReminder } from "../../api/eventsApi";
+import { useToast } from "../../hooks/use-toast";
+import ExportActions from "../../components/ExportActions";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Badge } from "../../components/ui/badge";
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
-} from "../components/ui/pagination";
+} from "../../components/ui/pagination";
 
 const EventParticipants = () => {
   const { t } = useTranslation();

@@ -16,13 +16,13 @@ import {
   Bell 
 } from "lucide-react";
 
-import { createPreRegEvent, getRooms } from "../api/eventsApi";
-import { useToast } from "../hooks/use-toast";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
+import { createPreRegEvent, getRooms } from "../../api/eventsApi";
+import { useToast } from "../../hooks/use-toast";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { Textarea } from "../../components/ui/textarea";
 
 const getTimezones = () =>
   Intl.supportedValuesOf("timeZone").map((timezone) => timezone);
