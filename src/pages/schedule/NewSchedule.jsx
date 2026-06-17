@@ -1,31 +1,30 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import { 
-  ArrowLeft, Calendar as CalendarIcon, Clock, Users, 
+  ArrowLeft, Calendar as CalendarIcon,
   Video, MonitorPlay, AlignLeft, Globe, Mail, X, Check, 
   ChevronLeft, ChevronRight, ChevronsUpDown 
 } from "lucide-react";
 
-import { getRooms } from "../api/roomsApi";
-import { sendInvite } from "../api/invitesApi";
-import { useToast } from "../hooks/use-toast";
-import { cn } from "../lib/utils";
+import { getRooms } from "../../api/roomsApi";
+import { createSchedule, getScheduleRecentEmails, updateSchedule } from "../../api/scheduleApi";
+import { useToast } from "../../hooks/use-toast";
+import { cn } from "../../lib/utils";
 
-import { Card, CardContent } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../components/ui/command";
-import { Skeleton } from "../components/ui/skeleton";
+import { Card, CardContent } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../components/ui/command";
+import { Skeleton } from "../../components/ui/skeleton";
 
-// --- Helpers from original old code ---
-const formatInviteDate = (date) => {
+const formatScheduleDate = (date) => {
   if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -33,8 +32,22 @@ const formatInviteDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+const parseScheduleDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+  const stringValue = String(value);
+  const dateOnlyMatch = stringValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    return new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]));
+  }
+
+  const date = new Date(stringValue);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const normalizeGuestEmails = (value = "") =>
-  (typeof value === 'string' ? value.split(",") : value)
+  (Array.isArray(value) ? value : String(value).split(","))
     .map((email) => email.trim())
     .filter(Boolean)
     .join(",");
@@ -44,8 +57,15 @@ const hasValidGuestEmails = (value = "") => {
   return emails.length > 0 && emails.every((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
 };
 
-const getInviteErrorMessage = (source, fallbackMessage) =>
-  source?.response?.data?.message || source?.message || fallbackMessage;
+const getScheduleErrorMessage = (source, fallbackMessage) => {
+  const message = source?.response?.data?.message || source?.message || fallbackMessage;
+
+  if (/unknown column ['`]?totime/i.test(message) || /SQLSTATE\[42S22\]/i.test(message)) {
+    return "The schedule backend is misconfigured: it requires an end time, but the database is missing the totime column.";
+  }
+
+  return message;
+};
 
 const buildTimezoneOptions = () =>
   Intl.supportedValuesOf("timeZone").map((timezone) => {
@@ -56,9 +76,73 @@ const buildTimezoneOptions = () =>
     return { label: timezoneOffset ? `${timezone} (${timezoneOffset})` : timezone, value: timezone };
   });
 
+const getScheduleGuestList = (meeting) =>
+  normalizeGuestEmails(
+    meeting?.guests ??
+      meeting?.guestList ??
+      meeting?.guest ??
+      meeting?.raw?.guest ??
+      meeting?.raw?.guests ??
+      ""
+  )
+    .split(",")
+    .filter(Boolean);
+
+const getScheduleInitialValues = (meeting) => {
+  const source = meeting?.raw ?? meeting ?? {};
+
+  return {
+    mode: String(meeting?.type ?? source.type ?? source.session_type ?? source.meeting_type ?? "meeting").toLowerCase().includes("webinar")
+      ? "webinar"
+      : "meeting",
+    emails: getScheduleGuestList(meeting),
+    formValues: {
+      room_id: String(meeting?.roomId ?? source.room_id ?? source.roomId ?? source.room?.id ?? ""),
+      title: meeting?.title ?? source.title ?? source.roomname ?? "",
+      date: parseScheduleDate(meeting?.date ?? source.date ?? source.start_date ?? source.scheduled_date),
+      fromtime: meeting?.fromTime ?? meeting?.time ?? source.fromtime ?? source.time ?? "",
+      totime: meeting?.toTime ?? meeting?.endTime ?? source.totime ?? source.endtime ?? source.end_time ?? "",
+      timezone: meeting?.timezone ?? source.timezone ?? "",
+      recurrence: source.recurrence ?? meeting?.recurrence ?? "once",
+      description: meeting?.description ?? source.description ?? "",
+    },
+  };
+};
+
+const normalizeRecentEmails = (data) => {
+  const values = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.data)
+      ? data.data
+      : Array.isArray(data?.emails)
+        ? data.emails
+        : Array.isArray(data?.recent_emails)
+          ? data.recent_emails
+          : [];
+
+  const emails = values.flatMap((item) => {
+    if (typeof item === "string") return item.split(",");
+    return [
+      item?.email,
+      item?.guest,
+      item?.guests,
+      item?.recipient,
+      item?.value,
+    ].filter(Boolean).flatMap((value) => String(value).split(","));
+  });
+
+  return [...new Set(emails.map((email) => email.trim()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
+};
+
 // --- Mini Calendar Helper ---
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const RECURRENCE_OPTIONS = [
+  { value: "once", label: "Once" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
 function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
 function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay(); }
 
@@ -129,55 +213,72 @@ function CalendarPicker({ value, onChange, minDate }) {
 export default function NewSchedule() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const editingMeeting = location.state?.meeting ?? null;
+  const isEditing = Boolean(editingMeeting?.id);
+  const initialScheduleValues = useMemo(() => getScheduleInitialValues(editingMeeting), [editingMeeting]);
 
-  const [mode, setMode] = useState("meeting");
-  const [emails, setEmails] = useState([]);
+  const [mode, setMode] = useState(initialScheduleValues.mode);
+  const [emails, setEmails] = useState(() => initialScheduleValues.emails);
   const [emailInput, setEmailInput] = useState("");
   const [roomOpen, setRoomOpen] = useState(false);
   const [timezoneOpen, setTimezoneOpen] = useState(false);
 
   // Load Rooms
   const roomQuery = useQuery({ queryKey: ["rooms"], queryFn: getRooms });
+  const recentEmailsQuery = useQuery({
+    queryKey: ["schedule-recent-emails"],
+    queryFn: getScheduleRecentEmails,
+    staleTime: 1000 * 60 * 5,
+  });
   const timezones = useMemo(() => buildTimezoneOptions(), []);
+  const recentEmailSuggestions = useMemo(
+    () => normalizeRecentEmails(recentEmailsQuery.data).filter((email) => !emails.includes(email)),
+    [emails, recentEmailsQuery.data]
+  );
 
-  // Form schema (same as old Modal)
   const formSchema = z.object({
-    room_id: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.roomRequired", "Room is required") }),
-    hostname: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.hostnameRequired", "Hostname is required") }),
-    title: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.titleRequired", "Title is required") }),
-    date: z.date({ required_error: t("inviteHistory.meetingForm.validation.dateRequired", "Date is required") }).nullable().refine((val) => val instanceof Date && !Number.isNaN(val.getTime()), { message: "Invalid date" }),
-    time: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.timeRequired", "Time is required") }),
-    timezone: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.timezoneRequired", "Timezone is required") }),
-    additional: z.string().trim().min(1, { message: t("inviteHistory.meetingForm.validation.additionalRequired", "Description required") }),
+    room_id: z.string().trim().min(1, { message: "Room is required" }),
+    title: z.string().trim().min(1, { message: "Title is required" }),
+    date: z.date({ required_error: "Date is required" }).nullable().refine((val) => val instanceof Date && !Number.isNaN(val.getTime()), { message: "Invalid date" }),
+    fromtime: z.string().trim().min(1, { message: "Start time is required" }),
+    totime: z.string().trim().min(1, { message: "End time is required" }),
+    timezone: z.string().trim().min(1, { message: "Timezone is required" }),
+    recurrence: z.enum(["once", "daily", "weekly", "monthly"]),
+    description: z.string().trim().min(1, { message: "Description is required" }),
+  }).refine((data) => data.totime > data.fromtime, {
+    message: "End time must be after start time",
+    path: ["totime"],
   });
 
-  const { register, handleSubmit, control, formState: { errors }, setValue, watch } = useForm({
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(formSchema),
-    defaultValues: { room_id: "", hostname: "", title: "", date: null, time: "", timezone: "", additional: "" },
+    defaultValues: initialScheduleValues.formValues,
   });
 
-  const sendInviteMutation = useMutation({
-    mutationFn: sendInvite,
+  const saveScheduleMutation = useMutation({
+    mutationFn: (payload) => isEditing ? updateSchedule({ id: editingMeeting.id, data: payload }) : createSchedule(payload),
     onSuccess: (response) => {
       if (response?.success === false) {
-        toast({ variant: "destructive", title: t("common.status.error"), description: getInviteErrorMessage(response, "Failed to schedule") });
+        toast({ variant: "destructive", title: t("common.status.error"), description: getScheduleErrorMessage(response, "Failed to schedule") });
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ["invite"] });
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
-      toast({ description: response?.message || "Session scheduled successfully!" });
-      navigate("/");
+      queryClient.invalidateQueries({ queryKey: ["schedule-recent-emails"] });
+      toast({ description: response?.message || (isEditing ? "Session updated successfully!" : "Session scheduled successfully!") });
+      navigate("/schedule");
     },
     onError: (error) => {
-      toast({ variant: "destructive", title: t("common.status.error"), description: getInviteErrorMessage(error, "Failed to schedule") });
+      toast({ variant: "destructive", title: t("common.status.error"), description: getScheduleErrorMessage(error, isEditing ? "Failed to update session" : "Failed to schedule") });
     },
   });
 
   const onSubmit = (data) => {
     if (emails.length === 0 && emailInput.trim() === '') {
-      toast({ variant: "destructive", description: "Please invite at least one guest" });
+      toast({ variant: "destructive", description: "Please add at least one guest" });
       return;
     }
     const guestEmails = [...emails];
@@ -185,33 +286,44 @@ export default function NewSchedule() {
       guestEmails.push(emailInput.trim());
     }
 
-    sendInviteMutation.mutate({
-      room_id: data.room_id,
-      hostname: data.hostname,
+    const guest = normalizeGuestEmails(guestEmails.join(","));
+    if (!hasValidGuestEmails(guest)) {
+      toast({ variant: "destructive", description: "Please enter valid guest email addresses" });
+      return;
+    }
+
+    saveScheduleMutation.mutate({
+      room_id: Number(data.room_id),
       title: data.title,
-      date: formatInviteDate(data.date),
-      time: data.time,
+      description: data.description,
+      recurrence: data.recurrence,
+      date: formatScheduleDate(data.date),
+      fromtime: data.fromtime,
+      totime: data.totime,
       timezone: data.timezone,
-      additional: data.additional,
-      guest: normalizeGuestEmails(guestEmails.join(',')),
+      guest,
     });
+  };
+
+  const addEmail = (value) => {
+    const newEmail = String(value).trim();
+    if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) return;
+
+    setEmails((previousEmails) =>
+      previousEmails.includes(newEmail) ? previousEmails : [...previousEmails, newEmail]
+    );
+    setEmailInput("");
   };
 
   const handleAddEmail = (e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
-      const newEmail = emailInput.trim();
-      if (newEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail) && !emails.includes(newEmail)) {
-        setEmails([...emails, newEmail]);
-        setEmailInput("");
-      }
+      addEmail(emailInput);
     }
   };
   const removeEmail = (emailToRemove) => setEmails(emails.filter(e => e !== emailToRemove));
 
   const selectedDate = watch("date");
-  const formattedDate = selectedDate ? selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" }) : null;
-
   if (!roomQuery.isSuccess) {
     return (
       <div className="flex flex-col gap-8 pb-10 max-w-4xl mx-auto w-full">
@@ -233,8 +345,12 @@ export default function NewSchedule() {
           <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Button>
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Schedule Session</h1>
-          <p className="text-muted-foreground mt-1">Set up a new meeting or webinar.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            {isEditing ? "Edit Session" : "Schedule Session"}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {isEditing ? "Update the meeting or webinar details." : "Set up a new meeting or webinar."}
+          </p>
         </div>
       </div>
 
@@ -267,17 +383,10 @@ export default function NewSchedule() {
           <CardContent className="p-6 space-y-5">
             <h3 className="text-lg font-bold text-foreground border-b border-border/40 pb-3">Basic Details</h3>
 
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Session Title <span className="text-red-500">*</span></label>
-                <Input {...register("title")} placeholder="e.g. Weekly Product Sync" className="h-11 bg-black/[0.02]" />
-                {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground">Hostname <span className="text-red-500">*</span></label>
-                <Input {...register("hostname")} placeholder="e.g. John Doe" className="h-11 bg-black/[0.02]" />
-                {errors.hostname && <p className="text-xs text-red-500">{errors.hostname.message}</p>}
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">Session Title <span className="text-red-500">*</span></label>
+              <Input {...register("title")} placeholder="e.g. Weekly Product Sync" className="h-11 bg-black/[0.02]" />
+              {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -285,12 +394,12 @@ export default function NewSchedule() {
                 <AlignLeft className="w-4 h-4 text-muted-foreground" /> Description <span className="text-red-500">*</span>
               </label>
               <Textarea
-                {...register("additional")}
+                {...register("description")}
                 rows={3}
                 placeholder="What is this session about?"
                 className="w-full rounded-xl bg-black/[0.02] p-3 text-sm text-foreground focus:ring-brand-green/50 resize-none"
               />
-              {errors.additional && <p className="text-xs text-red-500">{errors.additional.message}</p>}
+              {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
             </div>
 
             <div className="space-y-2">
@@ -343,18 +452,26 @@ export default function NewSchedule() {
               </div>
 
               <div className="p-6 space-y-6 flex flex-col justify-center">
-                <div className="space-y-2 w-full max-w-[200px] mx-auto">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Set Time <span className="text-red-500">*</span></span>
-                  <Input type="time" {...register("time")} className="h-14 text-2xl font-bold text-center bg-black/[0.02]" />
-                  {errors.time && <p className="text-xs text-red-500 text-center">{errors.time.message}</p>}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Start Time <span className="text-red-500">*</span></span>
+                    <Input type="time" {...register("fromtime")} className="h-14 text-xl font-bold text-center bg-black/[0.02]" />
+                    {errors.fromtime && <p className="text-xs text-red-500 text-center">{errors.fromtime.message}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">End Time <span className="text-red-500">*</span></span>
+                    <Input type="time" {...register("totime")} className="h-14 text-xl font-bold text-center bg-black/[0.02]" />
+                    {errors.totime && <p className="text-xs text-red-500 text-center">{errors.totime.message}</p>}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-border/40 bg-black/[0.01] flex items-center gap-4">
-              <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-              <label className="text-sm font-semibold text-foreground shrink-0">Timezone <span className="text-red-500">*</span></label>
-              <div className="flex-1 max-w-xs">
+            <div className="grid gap-4 border-t border-border/40 bg-black/[0.01] px-6 py-4 md:grid-cols-[1fr_220px]">
+              <div className="flex items-center gap-4">
+                <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                <label className="text-sm font-semibold text-foreground shrink-0">Timezone <span className="text-red-500">*</span></label>
+                <div className="flex-1 max-w-xs">
                 <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="outline" role="combobox" aria-expanded={timezoneOpen} className="w-full justify-between h-10 bg-surface">
@@ -380,19 +497,34 @@ export default function NewSchedule() {
                   </PopoverContent>
                 </Popover>
                 {errors.timezone && <p className="text-xs text-red-500 mt-1">{errors.timezone.message}</p>}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-foreground">Recurrence</label>
+                <select
+                  {...register("recurrence")}
+                  className="h-10 w-full rounded-md border border-input bg-surface px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {RECURRENCE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.recurrence && <p className="text-xs text-red-500">{errors.recurrence.message}</p>}
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Invites & Access */}
+        {/* Guests & Access */}
         <Card className="rounded-2xl border-border/60 bg-surface">
           <CardContent className="p-6 space-y-5">
-            <h3 className="text-lg font-bold text-foreground border-b border-border/40 pb-3">Invites & Access</h3>
+            <h3 className="text-lg font-bold text-foreground border-b border-border/40 pb-3">Guests & Access</h3>
             
             <div className="space-y-2">
               <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Mail className="w-4 h-4 text-muted-foreground" /> Invite Attendees
+                <Mail className="w-4 h-4 text-muted-foreground" /> Guests
               </label>
               <div className="p-3 min-h-[90px] border border-border/60 rounded-xl bg-black/[0.02] flex flex-wrap gap-2 items-start focus-within:ring-2 focus-within:ring-brand-green/50 focus-within:bg-surface transition-all">
                 {emails.map(email => (
@@ -412,7 +544,22 @@ export default function NewSchedule() {
                   className="flex-1 min-w-[200px] bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">Invited users will receive a calendar invite with the join link.</p>
+              <p className="text-xs text-muted-foreground">Guests will receive the schedule details with the join link.</p>
+              {recentEmailSuggestions.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-xs font-semibold text-muted-foreground">Recent:</span>
+                  {recentEmailSuggestions.slice(0, 8).map((email) => (
+                    <button
+                      key={email}
+                      type="button"
+                      onClick={() => addEmail(email)}
+                      className="rounded-full border border-border/60 bg-surface px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:border-brand-green/40 hover:bg-brand-green/10 hover:text-brand-green"
+                    >
+                      {email}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -422,8 +569,8 @@ export default function NewSchedule() {
           <Button variant="outline" type="button" onClick={() => navigate(-1)} className="h-12 px-6 rounded-xl border-border/60">
             Cancel
           </Button>
-          <Button type="submit" disabled={sendInviteMutation.isPending} className="h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white font-bold shadow-lg shadow-brand-green/20">
-            {sendInviteMutation.isPending ? "Scheduling..." : "Schedule Session"}
+          <Button type="submit" disabled={saveScheduleMutation.isPending} className="h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white font-bold shadow-lg shadow-brand-green/20">
+            {saveScheduleMutation.isPending ? (isEditing ? "Updating..." : "Scheduling...") : (isEditing ? "Update Session" : "Schedule Session")}
           </Button>
         </div>
       </form>

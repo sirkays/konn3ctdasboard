@@ -19,8 +19,9 @@ import Payments from "./pages/Payments";
 import Addon from "./pages/Addon";
 import Referee from "./pages/Referee";
 import Settings from "./pages/settings/Settings";
-import Schedule from "./pages/Schedule";
-import NewSchedule from "./pages/NewSchedule";
+import Schedule from "./pages/schedule/Schedule";
+import ScheduleDetails from "./pages/schedule/ScheduleDetails";
+import NewSchedule from "./pages/schedule/NewSchedule";
 import NewRoom from "./pages/NewRoom";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -366,6 +367,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: "schedule", element: <Schedule /> },
+          { path: "scheduleDetails/:id", element: <ScheduleDetails /> },
           { path: "dashboard/schedule/new", element: <NewSchedule /> },
           { path: "dashboard/rooms/new", element: <NewRoom /> },
           { path: "rooms", element: <Rooms /> },
