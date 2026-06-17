@@ -163,7 +163,7 @@ const Dashboard = () => {
         <div className="lg:col-span-2 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-foreground">Today's Meetings</h2>
-            <Link to="/rooms">
+            <Link to="/schedule">
               <Button variant="ghost" className="text-brand-green hover:text-brand-green-soft hover:bg-brand-green/10 rounded-lg">
                 View Calendar <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
@@ -248,7 +248,7 @@ const Dashboard = () => {
                   Schedule for later
                 </Button>
 
-                <div className="pt-2">
+                {/* <div className="pt-2">
                   <p className="mb-1 text-xs font-semibold text-white/70 uppercase tracking-wider">{t("dashboard.personalMeetingId", "Personal Meeting ID")}</p>
                   <div className="flex items-center justify-between bg-black/20 rounded-lg p-3">
                     <p className="truncate text-sm font-medium">
@@ -259,7 +259,7 @@ const Dashboard = () => {
                       onClick={() => handleCopy(personalRoomId)}
                     />
                   </div>
-                </div>
+                </div> */}
               </div>
             </CardContent>
           </Card>

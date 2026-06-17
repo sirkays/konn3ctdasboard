@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, KeyRound } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, KeyRound, CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
@@ -18,9 +18,8 @@ import Recordings from "./pages/Recordings";
 import Payments from "./pages/Payments";
 import Addon from "./pages/Addon";
 import Referee from "./pages/Referee";
-import Settings from "./pages/Settings";
-import InviteHistory from "./pages/InviteHistory";
-import NewInvite from "./pages/NewInvite";
+import Settings from "./pages/settings/Settings";
+import Schedule from "./pages/Schedule";
 import NewSchedule from "./pages/NewSchedule";
 import NewRoom from "./pages/NewRoom";
 import Login from "./pages/auth/Login";
@@ -36,13 +35,11 @@ import ViewProfile from "./pages/view-profile/ViewProfile";
 import EventIcon from "./assets/components/EventIcon";
 import HomeIcon from "./assets/components/HomeIcon";
 import CardIcon from "./assets/components/CardIcon";
-import UserIcon from "./assets/components/UserIcon";
 import RecordIcon from "./assets/components/RecordIcon";
 import VideoIcon from "./assets/components/VideoIcon";
 import StreamIcon from "./assets/components/StreamIcon";
 import AddonIcon from "./assets/components/AddonIcon";
 import RefereeIcon from "./assets/components/RefereeIcon";
-import HistoryIcon from "./assets/components/HistoryIcon";
 import DonationIcon from "./assets/components/DonationIcon";
 import SettingsIcon from "./assets/components/SettingsIcon";
 import AttendanceIcon from "./assets/components/AttendanceIcon";
@@ -74,8 +71,9 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
 
   const items = [
     { titleKey: "app.sidebar.home", url: "/", icon: HomeIcon },
-    { titleKey: "app.sidebar.profile", url: "/profile", icon: UserIcon },
+
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
+    { titleKey: "app.sidebar.schedule", url: "/schedule", icon: CalendarDays },
     { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
     {
       titleKey: "app.sidebar.recordings",
@@ -96,7 +94,6 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: AttendanceIcon,
     },
     { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
-    { titleKey: "app.sidebar.history", url: "/history", icon: HistoryIcon },
     { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
@@ -161,7 +158,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
                 )}>
                   <item.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-muted-foreground")} />
                 </div>
-                {(!isCollapsed || isMobileMenuOpen) && <span className="flex-1 truncate">{t(item.titleKey)}</span>}
+                {(!isCollapsed || isMobileMenuOpen) && <span className="flex-1 truncate">{t(item.titleKey, item.fallback)}</span>}
               </Link>
             )
           })}
@@ -271,12 +268,6 @@ function DashboardTopbar({ onMenuClick }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <Link to="/profile">
-              <DropdownMenuItem className="cursor-pointer py-2 px-3 rounded-lg hover:bg-black/[0.04]">
-                <UserIcon className="mr-3 h-4 w-4 text-muted-foreground" />
-                <span>{t("app.sidebar.profile", "Profile")}</span>
-              </DropdownMenuItem>
-            </Link>
             <Link to="/settings">
               <DropdownMenuItem className="cursor-pointer py-2 px-3 rounded-lg hover:bg-black/[0.04]">
                 <SettingsIcon className="mr-3 h-4 w-4 text-muted-foreground" />
@@ -374,6 +365,7 @@ const router = createBrowserRouter([
         element: <AuthenticatedAppLayout />,
         children: [
           { index: true, element: <Dashboard /> },
+          { path: "schedule", element: <Schedule /> },
           { path: "dashboard/schedule/new", element: <NewSchedule /> },
           { path: "dashboard/rooms/new", element: <NewRoom /> },
           { path: "rooms", element: <Rooms /> },
@@ -394,8 +386,6 @@ const router = createBrowserRouter([
             element: <EventParticipants />,
           },
           { path: "events/*", element: <Events /> },
-          { path: "history", element: <InviteHistory /> },
-          { path: "history/new", element: <NewInvite /> },
           { path: "api-tokens", element: <ApiTokens /> },
           { path: "settings", element: <Settings /> },
           { path: "notifications", element: <Notifications /> },

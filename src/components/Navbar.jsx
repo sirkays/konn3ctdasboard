@@ -100,7 +100,7 @@ const Navbar = () => {
                   </NavigationMenuItem>
                 </NavigationMenuList>
               </NavigationMenu>
-              <Link to="/profile">
+              <Link to="/settings">
                 <Avatar className="rounded-lg">
                   {userQuery.isSuccess && (
                     <AvatarImage src={userQuery.data?.user?.profile_photo_url} />
