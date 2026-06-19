@@ -247,8 +247,10 @@ export default function NewSchedule() {
     [emails, recentEmailsQuery.data]
   );
 
-  const formSchema = z.object({
-    room_id: z.string().trim().min(1, { message: "Room is required" }),
+  const formSchema = useMemo(() => z.object({
+    room_id: isEditing
+      ? z.string().optional()
+      : z.string().trim().min(1, { message: "Room is required" }),
     title: z.string().trim().min(1, { message: "Title is required" }),
     date: z.date({ required_error: "Date is required" }).nullable().refine((val) => val instanceof Date && !Number.isNaN(val.getTime()), { message: "Invalid date" }),
     fromtime: z.string().trim().min(1, { message: "Start time is required" }),
@@ -259,7 +261,7 @@ export default function NewSchedule() {
   }).refine((data) => data.totime > data.fromtime, {
     message: "End time must be after start time",
     path: ["totime"],
-  });
+  }), [isEditing]);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: zodResolver(formSchema),
@@ -300,8 +302,7 @@ export default function NewSchedule() {
       return;
     }
 
-    saveScheduleMutation.mutate({
-      room_id: Number(data.room_id),
+    const payload = {
       title: data.title,
       description: data.description,
       recurrence: data.recurrence,
@@ -311,7 +312,13 @@ export default function NewSchedule() {
       timezone: data.timezone,
       guest,
       shedule_type: mode,
-    });
+    };
+
+    if (!isEditing) {
+      payload.room_id = Number(data.room_id);
+    }
+
+    saveScheduleMutation.mutate(payload);
   };
 
   const addEmail = (value) => {
@@ -411,34 +418,36 @@ export default function NewSchedule() {
               {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">Link to Room <span className="text-red-500">*</span></label>
-              <Popover open={roomOpen} onOpenChange={setRoomOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={roomOpen} className="w-full justify-between h-11 bg-black/[0.02] hover:bg-black/[0.04]">
-                    {selectedRoomId ? rooms.find(r => String(r.id) === selectedRoomId)?.name : "Select an existing room..."}
-                    <ChevronsUpDown className="ml-2 opacity-50 h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search room..." className="h-9" />
-                    <CommandList>
-                      <CommandEmpty>No room found.</CommandEmpty>
-                      <CommandGroup>
-                        {rooms.map((room) => (
-                          <CommandItem key={room.id} value={String(room.name ?? "").toLowerCase()} onSelect={() => { setValue("room_id", String(room.id)); setRoomOpen(false); }}>
-                            {room.name}
-                            <Check className={cn("ml-auto", selectedRoomId === String(room.id) ? "opacity-100" : "opacity-0")} />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {errors.room_id && <p className="text-xs text-red-500">{errors.room_id.message}</p>}
-            </div>
+            {!isEditing && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Link to Room <span className="text-red-500">*</span></label>
+                <Popover open={roomOpen} onOpenChange={setRoomOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={roomOpen} className="w-full justify-between h-11 bg-black/[0.02] hover:bg-black/[0.04]">
+                      {selectedRoomId ? rooms.find(r => String(r.id) === selectedRoomId)?.name : "Select an existing room..."}
+                      <ChevronsUpDown className="ml-2 opacity-50 h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search room..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No room found.</CommandEmpty>
+                        <CommandGroup>
+                          {rooms.map((room) => (
+                            <CommandItem key={room.id} value={String(room.name ?? "").toLowerCase()} onSelect={() => { setValue("room_id", String(room.id)); setRoomOpen(false); }}>
+                              {room.name}
+                              <Check className={cn("ml-auto", selectedRoomId === String(room.id) ? "opacity-100" : "opacity-0")} />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {errors.room_id && <p className="text-xs text-red-500">{errors.room_id.message}</p>}
+              </div>
+            )}
           </CardContent>
         </Card>
 

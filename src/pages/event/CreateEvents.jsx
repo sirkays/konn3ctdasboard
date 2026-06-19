@@ -31,6 +31,28 @@ const createEventSelectClassName =
   "flex h-11 w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30 [color-scheme:light] dark:[color-scheme:dark]";
 const createEventOptionClassName = "bg-background text-foreground";
 
+const getCreateEventErrorMessage = (error, fallbackMessage) => {
+  const backendMessage = String(
+    error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      ""
+  );
+
+  if (
+    backendMessage.includes("date_interval_create_from_date_string") &&
+    backendMessage.includes("0.5 days")
+  ) {
+    return "The 12 hours reminder option is not supported by the backend right now. Please choose 1 day or 2 days before the event and try again.";
+  }
+
+  if (backendMessage.toLowerCase().includes("timezone")) {
+    return "The backend could not process the selected event timezone/reminder. Please choose a different timezone or reminder option and try again.";
+  }
+
+  return backendMessage || fallbackMessage;
+};
+
 const CreateEvents = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -176,7 +198,10 @@ const CreateEvents = () => {
     } catch (error) {
       console.error("Error creating event:", error);
       toast({
-        description: t("events.create.toasts.createError", "An unexpected error occurred."),
+        description: getCreateEventErrorMessage(
+          error,
+          t("events.create.toasts.createError", "An unexpected error occurred.")
+        ),
         variant: "destructive",
       });
     } finally {
@@ -420,7 +445,6 @@ const CreateEvents = () => {
                     <option className={createEventOptionClassName} value="">{t("events.create.placeholders.selectReminder", "Select Reminder")}</option>
                     <option className={createEventOptionClassName} value="2">{t("events.create.reminders.twoDays", "2 Days before")}</option>
                     <option className={createEventOptionClassName} value="1">{t("events.create.reminders.oneDay", "1 Day before")}</option>
-                    <option className={createEventOptionClassName} value="0.5">{t("events.create.reminders.twelveHours", "12 Hours before")}</option>
                   </select>
                 </div>
               </div>

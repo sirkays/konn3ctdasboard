@@ -123,7 +123,14 @@ const normalizeMeetings = (data) => {
         description: meeting.description ?? "",
         roomName: meeting.roomname ?? meeting.room_name ?? meeting.room ?? "",
         guestList,
-        joinLink: meeting.join_link ?? meeting.joinLink ?? meeting.meeting_url ?? meeting.url ?? "",
+        joinLink:
+          meeting.roomlink ??
+          meeting.room_link ??
+          meeting.join_link ??
+          meeting.joinLink ??
+          meeting.meeting_url ??
+          meeting.url ??
+          "",
         raw: meeting,
         type: type.includes("webinar") ? "WEBINAR" : "MEETING",
         attendeeLabel: type.includes("webinar")
@@ -190,19 +197,19 @@ export default function Schedule() {
     }
   }, [meetings]);
 
-  const handleCopySessionId = async (meeting) => {
-    if (!meeting?.id) {
-      toast({ description: "No session ID available to copy." });
+  const handleCopyMeetingLink = async (meeting) => {
+    if (!meeting?.joinLink) {
+      toast({ description: "No meeting link available to copy." });
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(String(meeting.id));
-      toast({ description: "Session ID copied to clipboard." });
+      await navigator.clipboard.writeText(meeting.joinLink);
+      toast({ description: "Meeting link copied to clipboard." });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Unable to copy session ID",
+        title: "Unable to copy meeting link",
         description: "Please try again.",
       });
     }
@@ -215,6 +222,19 @@ export default function Schedule() {
     if (!confirmed) return;
 
     cancelScheduleMutation.mutate(meeting.id);
+  };
+
+  const handleJoinSession = (meeting) => {
+    if (!meeting?.joinLink) {
+      toast({
+        variant: "destructive",
+        title: "Join link unavailable",
+        description: "This schedule does not include a room link yet.",
+      });
+      return;
+    }
+
+    window.location.assign(meeting.joinLink);
   };
 
   const weekStart = getMonday(selectedDate);
@@ -405,12 +425,13 @@ export default function Schedule() {
                         </div>
 
                         <div className="pointer-events-none flex shrink-0 items-center justify-end gap-2 self-end opacity-0 transition-opacity duration-200 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 sm:self-center">
-                          <ToolTips content="Copy session ID">
+                          <ToolTips content="Copy meeting link">
                             <button
                               type="button"
-                              onClick={() => handleCopySessionId(meeting)}
+                              onClick={() => handleCopyMeetingLink(meeting)}
+                              disabled={!meeting.joinLink}
                               className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/[0.06]"
-                              aria-label="Copy session ID"
+                              aria-label="Copy meeting link"
                             >
                               <Copy className="h-4 w-4" />
                             </button>
@@ -443,7 +464,8 @@ export default function Schedule() {
                           <ToolTips content="Join session">
                             <Button
                               type="button"
-                              onClick={() => navigate("/join")}
+                              onClick={() => handleJoinSession(meeting)}
+                              disabled={!meeting.joinLink}
                               className="h-10 rounded-xl bg-brand-green px-4 text-sm font-bold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854]"
                             >
                               <Play className="h-4 w-4" />

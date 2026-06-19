@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
+import EventDashboard from "./EventDashboard";
 import EventList from "./EventList";
 import CreateEvents from "./CreateEvents";
 import EventParticipants from "./EventParticipants";
@@ -8,10 +9,13 @@ const Events = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex w-full items-start justify-center px-3 py-4 md:px-4 md:py-6 lg:p-8">
+    <div className="w-full">
       <Routes>
-        {/* Default route: event list */}
-        <Route path="/" element={<EventList />} />
+        {/* Default route: event dashboard */}
+        <Route path="/" element={<EventDashboard />} />
+
+        {/* Legacy event list */}
+        <Route path="list" element={<EventList />} />
 
         {/* Create event form */}
         <Route

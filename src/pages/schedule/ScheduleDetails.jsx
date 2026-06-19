@@ -102,6 +102,8 @@ const normalizeSchedule = (schedule) => {
     fallbackMeeting.roomname;
   const joinLink =
     schedule?.joinLink ??
+    source.roomlink ??
+    source.room_link ??
     source.join_link ??
     source.joinLink ??
     source.meeting_url ??
@@ -130,10 +132,7 @@ const getSchedulesArray = (data) => (Array.isArray(data) ? data : Array.isArray(
 
 const buildJoinLink = (meeting) => {
   if (meeting.joinLink) return meeting.joinLink;
-
-  const baseUrl = process.env.REACT_APP_BASE_BACKENED_URL || "https://konn3ct.io/";
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return `${normalizedBase}join/${meeting.id}`;
+  return "";
 };
 
 const getIcsDate = (date, time) => {
@@ -232,6 +231,19 @@ export default function ScheduleDetails() {
     const confirmed = window.confirm(`Cancel "${meeting.title}"?`);
     if (!confirmed) return;
     cancelScheduleMutation.mutate(meeting.id);
+  };
+
+  const handleJoin = () => {
+    if (!joinLink) {
+      toast({
+        variant: "destructive",
+        title: "Join link unavailable",
+        description: "This schedule does not include a room link yet.",
+      });
+      return;
+    }
+
+    window.location.assign(joinLink);
   };
 
   if (!stateMeeting && schedulesQuery.isLoading) {
@@ -386,7 +398,8 @@ export default function ScheduleDetails() {
               </p>
               <Button
                 type="button"
-                onClick={() => navigate("/join")}
+                onClick={handleJoin}
+                disabled={!joinLink}
                 className="mt-5 h-12 w-full rounded-xl bg-brand-green text-base font-extrabold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854]"
               >
                 <Video className="h-4 w-4" />
@@ -410,6 +423,7 @@ export default function ScheduleDetails() {
                 <button
                   type="button"
                   onClick={() => handleCopy(joinLink, "Join link copied to clipboard.")}
+                  disabled={!joinLink}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-foreground transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
                   aria-label="Copy join link"
                 >

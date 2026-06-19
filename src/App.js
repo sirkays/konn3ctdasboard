@@ -95,7 +95,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: AttendanceIcon,
     },
     { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
-    { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
+    // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
 

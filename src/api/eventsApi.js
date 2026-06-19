@@ -18,10 +18,47 @@ const unwrapArray = (payload, keys = []) => {
   return [];
 };
 
+const getPaginationMeta = (payload) => {
+  if (Array.isArray(payload)) return null;
+
+  if (Array.isArray(payload?.data?.data)) return payload.data;
+  if (Array.isArray(payload?.data)) return payload;
+
+  return null;
+};
+
 export const getEventList = async () => {
   try {
-    const res = await api.get("/event-list");
-    return unwrapArray(res.data, ["events"]);
+    const events = [];
+    let page = 1;
+    let hasNextPage = true;
+    const MAX_EVENT_PAGES = 50;
+
+    while (hasNextPage && page <= MAX_EVENT_PAGES) {
+      const res = await api.get("/event-list", {
+        params: {
+          page,
+        },
+      });
+      const pageEvents = unwrapArray(res.data, ["events"]);
+      const pagination = getPaginationMeta(res.data);
+
+      events.push(...pageEvents);
+
+      if (!pagination) {
+        hasNextPage = false;
+      } else {
+        const currentPage = Number(pagination.current_page ?? page);
+        const lastPage = Number(pagination.last_page ?? 0);
+
+        hasNextPage = lastPage > 0
+          ? currentPage < lastPage
+          : Boolean(pagination.next_page_url);
+        page = currentPage + 1;
+      }
+    }
+
+    return events;
   } catch (error) {
     console.error("Error fetching event list:", error);
     throw error;
@@ -36,9 +73,26 @@ export const getEventSummary = async () => {
     return {
       activeEvents: Number(summary.active_events ?? 0),
       totalRegistrations: Number(summary.total_registrations ?? 0),
+      revenue30d: Number(
+        summary.revenue_30d ??
+          summary.revenue ??
+          summary.total_revenue ??
+          0
+      ),
+      payoutStatus: summary.payout_status ?? summary.payoutStatus ?? "",
     };
   } catch (error) {
     console.error("Error fetching event summary:", error);
+    throw error;
+  }
+};
+
+export const getEventRecentRegistrations = async () => {
+  try {
+    const res = await api.get("/event-recent-registrations");
+    return unwrapArray(res.data, ["registrations", "recent_registrations", "users"]);
+  } catch (error) {
+    console.error("Error fetching recent event registrations:", error);
     throw error;
   }
 };
