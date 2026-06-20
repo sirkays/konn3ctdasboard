@@ -30,6 +30,7 @@ import JoinRoom from "./pages/JoinRoom";
 import Donations from "./pages/Donations";
 import Attendance from "./pages/attendance/Attendance";
 import ViewAttendance from "./pages/attendance/ViewAttendance";
+import Team from "./pages/team/team";
 import EventParticipants from "./pages/event/EventParticipants";
 import Events from "./pages/event/Events";
 import ViewProfile from "./pages/view-profile/ViewProfile";
@@ -44,6 +45,7 @@ import RefereeIcon from "./assets/components/RefereeIcon";
 import DonationIcon from "./assets/components/DonationIcon";
 import SettingsIcon from "./assets/components/SettingsIcon";
 import AttendanceIcon from "./assets/components/AttendanceIcon";
+import UserIcon from "./assets/components/UserIcon";
 import Notifications from "./pages/Notifications";
 import ApiTokens from "./pages/ApiTokens";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
@@ -75,6 +77,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
 
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
     { titleKey: "app.sidebar.schedule", url: "/schedule", icon: CalendarDays },
+    { titleKey: "app.sidebar.team", fallback: "Team", url: "/team", icon: UserIcon },
     { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
     {
       titleKey: "app.sidebar.recordings",
@@ -95,6 +98,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: AttendanceIcon,
     },
     { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
+    
     // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
@@ -388,6 +392,7 @@ const router = createBrowserRouter([
             element: <EventParticipants />,
           },
           { path: "events/*", element: <Events /> },
+          { path: "team", element: <Team /> },
           { path: "api-tokens", element: <ApiTokens /> },
           { path: "settings", element: <Settings /> },
           { path: "notifications", element: <Notifications /> },
