@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
+  Copy,
   Crown,
   Edit3,
   KeyRound,
@@ -71,6 +72,8 @@ import TeamDetail from "./component/teamDetail";
 import UpgradeTeam from "./component/upgradeTeam";
 
 const TEAM_QUERY_KEY = ["team-list"];
+const API_BASE_URL = String(process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
+const TEAM_ACTIVATION_LINK_BASE = `${API_BASE_URL}/teams/activate`;
 const roleOptions = ["Owner", "Admin", "Member"];
 
 const roleStyles = {
@@ -139,6 +142,98 @@ const getAvatarClassName = (index) =>
     "from-[#c47a00] to-[#f3ad2f]",
   ][index % 5];
 
+const buildTeamInviteLink = (value) => {
+  const rawValue = String(value || "").trim();
+  if (!rawValue) return "";
+  if (/^https?:\/\//i.test(rawValue)) return rawValue;
+  if (rawValue.startsWith("/")) return `${API_BASE_URL}${rawValue}`;
+  if (rawValue.includes("/")) return `${API_BASE_URL}/${rawValue.replace(/^\/+/, "")}`;
+  return rawValue;
+};
+
+const buildActivationLink = (token) => {
+  const rawToken = String(token || "").trim();
+  if (!rawToken) return "";
+  if (/^https?:\/\//i.test(rawToken)) return rawToken;
+  if (rawToken.startsWith("/")) return `${API_BASE_URL}${rawToken}`;
+  if (rawToken.includes("/")) return `${API_BASE_URL}/${rawToken.replace(/^\/+/, "")}`;
+  return `${TEAM_ACTIVATION_LINK_BASE}/${encodeURIComponent(rawToken)}`;
+};
+
+const getInviteLinkValue = (source) =>
+  getNested(source, [
+    "invite_link",
+    "inviteLink",
+    "invite_url",
+    "inviteUrl",
+    "invitation_link",
+    "invitationLink",
+    "invitation_url",
+    "invitationUrl",
+    "activation_link",
+    "activationLink",
+    "activation_url",
+    "activationUrl",
+    "accept_link",
+    "acceptLink",
+    "accept_url",
+    "acceptUrl",
+    "invite.link",
+    "invite.url",
+    "invitation.link",
+    "invitation.url",
+    "data.invite_link",
+    "data.inviteLink",
+    "data.invite_url",
+    "data.inviteUrl",
+    "data.invitation_link",
+    "data.invitationLink",
+    "data.invitation_url",
+    "data.invitationUrl",
+    "data.activation_link",
+    "data.activationLink",
+    "data.activation_url",
+    "data.activationUrl",
+    "data.accept_link",
+    "data.acceptLink",
+    "data.accept_url",
+    "data.acceptUrl",
+    "data.invite.link",
+    "data.invite.url",
+    "data.invitation.link",
+    "data.invitation.url",
+  ]);
+
+const getInviteTokenValue = (source) =>
+  getNested(source, [
+    "activation_token",
+    "activationToken",
+    "invite_token",
+    "inviteToken",
+    "invitation_token",
+    "invitationToken",
+    "team_invite_token",
+    "teamInviteToken",
+    "acceptance_token",
+    "acceptanceToken",
+    "token",
+    "invite.token",
+    "invitation.token",
+    "data.activation_token",
+    "data.activationToken",
+    "data.invite_token",
+    "data.inviteToken",
+    "data.invitation_token",
+    "data.invitationToken",
+    "data.team_invite_token",
+    "data.teamInviteToken",
+    "data.acceptance_token",
+    "data.acceptanceToken",
+    "data.token",
+    "data.invite.token",
+    "data.invitation.token",
+  ]);
+
 const normalizeMember = (item, index) => {
   const firstName = getNested(item, ["firstname", "firstName", "user.firstname", "user.firstName"]);
   const lastName = getNested(item, ["lastname", "lastName", "user.lastname", "user.lastName"]);
@@ -169,6 +264,8 @@ const normalizeMember = (item, index) => {
     "activated_at",
     "user.created_at",
   ]);
+  const directInviteLink = getInviteLinkValue(item);
+  const inviteToken = getInviteTokenValue(item);
 
   return {
     ...item,
@@ -182,7 +279,25 @@ const normalizeMember = (item, index) => {
     status,
     statusTone: status.toLowerCase(),
     joined: formatMonthYear(joinedRaw),
+    inviteLink: buildTeamInviteLink(directInviteLink) || buildActivationLink(inviteToken),
   };
+};
+
+const copyToClipboard = async (text) => {
+  if (navigator?.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.setAttribute("readonly", "");
+  textArea.style.position = "fixed";
+  textArea.style.left = "-9999px";
+  document.body.appendChild(textArea);
+  textArea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textArea);
 };
 
 const extractApiError = (error, fallback) =>
@@ -555,28 +670,92 @@ const TeamActions = ({ member }) => {
       toast({ variant: "destructive", description: extractApiError(error, "Unable to update suspension status.") }),
   });
 
-  const handleViewProfile = () => {
-    if (isPending) {
-      toast({
-        variant: "destructive",
-        description: "User not activated, profile can't be viewed.",
-      });
-      return;
-    }
+  const copyInviteMutation = useMutation({
+    mutationFn: () =>
+      inviteTeamMember({
+        email: member.email,
+        role: member.role || "Member",
+      }),
+  });
 
+  const handleViewProfile = () => {
     setIsDetailOpen(true);
   };
 
   const handleSuspendToggle = () => {
-    if (isPending) {
+    suspendMutation.mutate(member.id);
+  };
+
+  const handleCopyInviteLink = async () => {
+    const copyLink = async (link) => {
+      await copyToClipboard(link);
+      toast({ description: "Invite link copied." });
+    };
+
+    if (!member.email) {
+      if (member.inviteLink) {
+        try {
+          await copyLink(member.inviteLink);
+        } catch {
+          toast({
+            variant: "destructive",
+            description: "Unable to copy invite link.",
+          });
+        }
+        return;
+      }
+
       toast({
         variant: "destructive",
-        description: "User not activated, so can't be suspended.",
+        description: "No email address is available for this user.",
       });
       return;
     }
 
-    suspendMutation.mutate(member.id);
+    try {
+      const response = await copyInviteMutation.mutateAsync();
+      const inviteLink =
+        buildTeamInviteLink(getInviteLinkValue(response)) ||
+        buildActivationLink(getInviteTokenValue(response)) ||
+        member.inviteLink;
+
+      if (!inviteLink) {
+        toast({
+          variant: "destructive",
+          description:
+            response?.message ||
+            "Invite was sent, but the API did not return a copyable link.",
+        });
+        return;
+      }
+
+      await copyLink(inviteLink);
+      await invalidateTeam();
+    } catch (error) {
+      if (!member.inviteLink) {
+        toast({
+          variant: "destructive",
+          description: extractApiError(error, "Unable to create invite link."),
+        });
+        return;
+      }
+
+      try {
+        await copyLink(member.inviteLink);
+      } catch {
+        toast({
+          variant: "destructive",
+          description: "Unable to copy invite link.",
+        });
+      }
+    }
+  };
+
+  const handleBlockedMenu = () => {
+    toast({
+      variant: "destructive",
+      description: "User not activated, extra actions are unavailable.",
+    });
   };
 
   return (
@@ -597,6 +776,23 @@ const TeamActions = ({ member }) => {
               </Button>
             </ActionTooltip>
 
+            <ActionTooltip label="Copy Invite Link">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-brand-green/10 hover:text-brand-green disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={`Copy invite link for ${member.name}`}
+                onClick={handleCopyInviteLink}
+              >
+                {copyInviteMutation.isPending ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </ActionTooltip>
+
             <ActionTooltip label="Delete">
               <Button
                 type="button"
@@ -610,48 +806,61 @@ const TeamActions = ({ member }) => {
               </Button>
             </ActionTooltip>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-black/[0.06] hover:text-foreground data-[state=open]:bg-black/[0.06] data-[state=open]:text-foreground"
-                  aria-label={`Open more actions for ${member.name}`}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                sideOffset={10}
-                className="w-56 rounded-xl border-border/60 bg-surface p-1.5 text-foreground shadow-[0_18px_45px_rgba(0,0,0,0.12)]"
+            {isPending ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-black/[0.06] hover:text-foreground"
+                aria-label={`Extra actions unavailable for ${member.name}`}
+                onClick={handleBlockedMenu}
               >
-                <DropdownMenuItem
-                  className="cursor-pointer rounded-lg px-3 py-2.5 text-sm focus:bg-black/[0.04]"
-                  onSelect={handleViewProfile}
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:bg-black/[0.06] hover:text-foreground data-[state=open]:bg-black/[0.06] data-[state=open]:text-foreground"
+                    aria-label={`Open more actions for ${member.name}`}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  sideOffset={10}
+                  className="w-56 rounded-xl border-border/60 bg-surface p-1.5 text-foreground shadow-[0_18px_45px_rgba(0,0,0,0.12)]"
                 >
-                  <UserCircle className="mr-2 h-4 w-4 text-muted-foreground" />
-                  View Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer rounded-lg px-3 py-2.5 text-sm focus:bg-black/[0.04]"
-                  onSelect={() => setActionDialog("password")}
-                >
-                  <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
-                  Reset Password
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="my-1.5 bg-border/60" />
-                <DropdownMenuItem
-                  className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-orange-500 focus:bg-orange-500/10 focus:text-orange-500"
-                  onSelect={handleSuspendToggle}
-                  disabled={suspendMutation.isPending}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  {isSuspended ? "Unsuspend User" : "Suspend User"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    className="cursor-pointer rounded-lg px-3 py-2.5 text-sm focus:bg-black/[0.04]"
+                    onSelect={handleViewProfile}
+                  >
+                    <UserCircle className="mr-2 h-4 w-4 text-muted-foreground" />
+                    View Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer rounded-lg px-3 py-2.5 text-sm focus:bg-black/[0.04]"
+                    onSelect={() => setActionDialog("password")}
+                  >
+                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />
+                    Reset Password
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1.5 bg-border/60" />
+                  <DropdownMenuItem
+                    className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-orange-500 focus:bg-orange-500/10 focus:text-orange-500"
+                    onSelect={handleSuspendToggle}
+                    disabled={suspendMutation.isPending}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {isSuspended ? "Unsuspend User" : "Suspend User"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </TooltipProvider>
 

@@ -1,4 +1,10 @@
+import axios from "axios";
+
 import { api } from ".";
+
+const publicTeamApi = axios.create({
+  baseURL: process.env.REACT_APP_BASE_URL,
+});
 
 export const inviteTeamMember = async (data) => {
   const res = await api.post("/teams/invite", data);
@@ -56,11 +62,11 @@ export const fetchTeamMemberSessions = async (id) => {
 };
 
 export const checkTeamInviteToken = async (token) => {
-  const res = await api.get(`/teams/check-token/${token}`);
+  const res = await publicTeamApi.get(`/teams/check-token/${token}`);
   return res.data;
 };
 
 export const activateTeamInvite = async (token) => {
-  const res = await api.get(`/teams/activate/${token}`);
+  const res = await publicTeamApi.get(`/teams/activate/${token}`);
   return res.data;
 };

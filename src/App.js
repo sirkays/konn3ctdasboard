@@ -30,6 +30,7 @@ import JoinRoom from "./pages/JoinRoom";
 import Donations from "./pages/Donations";
 import Attendance from "./pages/attendance/Attendance";
 import ViewAttendance from "./pages/attendance/ViewAttendance";
+import AcceptTeam from "./pages/team/acceptTeam";
 import Team from "./pages/team/team";
 import EventParticipants from "./pages/event/EventParticipants";
 import Events from "./pages/event/Events";
@@ -78,7 +79,9 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
     { titleKey: "app.sidebar.schedule", url: "/schedule", icon: CalendarDays },
     { titleKey: "app.sidebar.team", fallback: "Team", url: "/team", icon: UserIcon },
+    { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
     { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
+    
     {
       titleKey: "app.sidebar.recordings",
       url: "/recordings",
@@ -97,7 +100,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       url: "/attendance",
       icon: AttendanceIcon,
     },
-    { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
+    
     
     // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
@@ -365,6 +368,10 @@ const router = createBrowserRouter([
       {
         path: "view-profile",
         element: <ViewProfile />,
+      },
+      {
+        path: "team-invite/:activationToken",
+        element: <AcceptTeam />,
       },
       {
         element: <AuthenticatedAppLayout />,

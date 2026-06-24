@@ -446,11 +446,21 @@ const EventDashboard = () => {
                 const currency = getEventCurrency(event);
                 const price = getEventPrice(event);
                 const revenue = getEventRevenue(event);
+                const reference = getEventReference(event);
 
                 return (
                   <Card
-                    key={getEventReference(event)}
-                    className="rounded-xl border-border/60 bg-surface p-6 shadow-[0_18px_34px_rgba(15,23,42,0.08)]"
+                    key={reference}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => reference && navigate(`/events/detail/${reference}`)}
+                    onKeyDown={(eventKey) => {
+                      if ((eventKey.key === "Enter" || eventKey.key === " ") && reference) {
+                        eventKey.preventDefault();
+                        navigate(`/events/detail/${reference}`);
+                      }
+                    }}
+                    className="cursor-pointer rounded-xl border-border/60 bg-surface p-6 shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition-all hover:-translate-y-0.5 hover:border-brand-blue/30 hover:shadow-[0_22px_38px_rgba(15,23,42,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/30"
                   >
                     <div className="mb-5 flex items-start justify-between gap-4">
                       <div className="min-w-0">
