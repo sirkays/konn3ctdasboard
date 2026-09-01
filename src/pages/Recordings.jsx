@@ -701,7 +701,7 @@ const Recordings = () => {
                 <AlertCircle className="h-12 w-12 text-rose-500 mb-3" />
                 <h3 className="text-base font-semibold text-white">Video Stream Unavailable</h3>
                 <p className="text-xs text-zinc-400 mt-1 mb-4 leading-relaxed">
-                  The video file could not be loaded from the storage server (HTTP 404 / Missing object on DigitalOcean Spaces). The file may have expired, was purged, or failed to upload from the media recording server.
+                  The video file could not be loaded from the server (HTTP 404 - Not Found). The recording file may have expired, was moved, or is temporarily unavailable.
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
