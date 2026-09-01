@@ -50,6 +50,7 @@ const Recordings = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [recordIdToDelete, setRecordIdToDelete] = useState(null);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [videoError, setVideoError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState();
   const [currentPage, setCurrentPage] = useState(1);
@@ -219,6 +220,7 @@ const Recordings = () => {
     }
 
     if (rec.url) {
+      setVideoError(false);
       setActiveVideo({
         title: rec.title,
         roomName: rec.roomName,
@@ -683,16 +685,45 @@ const Recordings = () => {
             )}
           </div>
           <div className="relative aspect-video w-full bg-black flex items-center justify-center">
-            {activeVideo?.url ? (
+            {activeVideo?.url && !videoError ? (
               <video
                 key={activeVideo.url}
                 src={activeVideo.url}
                 controls
                 autoPlay
+                onError={() => setVideoError(true)}
                 className="w-full h-full max-h-[70vh] object-contain"
               >
                 Your browser does not support the video tag.
               </video>
+            ) : videoError ? (
+              <div className="p-8 text-center text-zinc-300 max-w-md mx-auto flex flex-col items-center animate-in fade-in duration-300">
+                <AlertCircle className="h-12 w-12 text-rose-500 mb-3" />
+                <h3 className="text-base font-semibold text-white">Video Stream Unavailable</h3>
+                <p className="text-xs text-zinc-400 mt-1 mb-4 leading-relaxed">
+                  The video file could not be loaded from the storage server (HTTP 404 / Missing object on DigitalOcean Spaces). The file may have expired, was purged, or failed to upload from the media recording server.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white rounded-lg"
+                    onClick={() => {
+                      navigator.clipboard.writeText(activeVideo?.url || "");
+                      toast({ description: "Video URL copied to clipboard" });
+                    }}
+                  >
+                    Copy Stream URL
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-brand-blue text-white hover:bg-brand-blue/90 rounded-lg"
+                    onClick={() => setVideoError(false)}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="p-8 text-center text-zinc-400">
                 <Film className="h-12 w-12 mx-auto mb-3 opacity-40" />
