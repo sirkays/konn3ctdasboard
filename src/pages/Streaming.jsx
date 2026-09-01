@@ -3,9 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Separator } from "../components/ui/separator";
 import {
-  Plus, Cast, Radio, Clock, Calendar, Check, ChevronsUpDown, StopCircle, PlayCircle, Globe, Video
+  Cast, Radio, Clock, Calendar, Check, ChevronsUpDown, StopCircle, PlayCircle, Globe, Video
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,6 +55,42 @@ import {
 } from "../components/ui/popover";
 import { z } from "zod";
 import { Skeleton } from "../components/ui/skeleton";
+
+const getApiErrorMessage = (error, fallback) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  fallback;
+
+const getRoomId = (room) => room?.id ?? room?.room_id ?? room?.meeting_id;
+
+const getRoomLabel = (room) =>
+  room?.room_name || room?.name || room?.label || `Room ${getRoomId(room)}`;
+
+const normalizeRoomList = (res) => {
+  let list = res;
+  if (!Array.isArray(list)) {
+    if (list && typeof list === "object") {
+      if (Array.isArray(list.data)) list = list.data;
+      else if (Array.isArray(list.rooms)) list = list.rooms;
+      else {
+        const values = Object.values(list).filter((v) => Array.isArray(v));
+        list = values.length > 0 ? values[0] : [];
+      }
+    } else list = [];
+  }
+
+  return list.filter((room) => {
+    const roomId = getRoomId(room);
+    return roomId !== undefined && roomId !== null && String(roomId).trim() !== "";
+  });
+};
+
+const normalizeRoomIdForPayload = (roomId) => {
+  const trimmedRoomId = String(roomId).trim();
+  const numericRoomId = Number(trimmedRoomId);
+  return Number.isFinite(numericRoomId) ? numericRoomId : trimmedRoomId;
+};
 
 const Streaming = () => {
   const { t } = useTranslation();
@@ -310,21 +345,11 @@ const StreamForm = ({ setOpenDialog }) => {
     const loadRooms = async () => {
       try {
         const res = await getRooms();
-        let list = res;
-        if (!Array.isArray(list)) {
-          if (list && typeof list === "object") {
-            if (Array.isArray(list.data)) list = list.data;
-            else if (Array.isArray(list.rooms)) list = list.rooms;
-            else {
-              const values = Object.values(list).filter((v) => Array.isArray(v));
-              list = values.length > 0 ? values[0] : [];
-            }
-          } else list = [];
-        }
+        const list = normalizeRoomList(res);
         if (!cancelled) setRooms(list);
       } catch (err) {
         console.error("Failed to load rooms:", err);
-        setRooms([]);
+        if (!cancelled) setRooms([]);
       } finally {
         if (!cancelled) setRoomLoading(false);
       }
@@ -377,13 +402,30 @@ const StreamForm = ({ setOpenDialog }) => {
 
   const selectedType = form.watch("type");
 
-  const onSubmit = (data) => {
-    if (data.type === "Combo") {
-      startComboMutation.mutate({ room_id: data.room_id, youtube_key: data.youtube_key, facebook_key: data.facebook_key });
-    } else {
-      startStreamMutation.mutate({ room_id: data.room_id, type: data.type, key: data.key });
+  const onSubmit = async (data) => {
+    const room_id = normalizeRoomIdForPayload(data.room_id);
+
+    try {
+      if (data.type === "Combo") {
+        await startComboMutation.mutateAsync({
+          room_id,
+          youtube_key: data.youtube_key.trim(),
+          facebook_key: data.facebook_key.trim(),
+        });
+      } else {
+        await startStreamMutation.mutateAsync({
+          room_id,
+          type: data.type,
+          key: data.key.trim(),
+        });
+      }
+      setOpenDialog(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: getApiErrorMessage(error, "Unable to start stream. Please try again."),
+      });
     }
-    setOpenDialog(false);
   };
 
   return (
@@ -399,7 +441,7 @@ const StreamForm = ({ setOpenDialog }) => {
               >
                 <option value="">{roomLoading ? t("streaming.form.loadingRooms") : t("streaming.form.selectRoom")}</option>
                 {Array.isArray(rooms) && rooms.map((room) => (
-                  <option key={room.id} value={room.id}>{room.room_name || room.name || room.label || `Room ${room.id}`}</option>
+                  <option key={getRoomId(room)} value={getRoomId(room)}>{getRoomLabel(room)}</option>
                 ))}
               </select>
             </FormControl>
