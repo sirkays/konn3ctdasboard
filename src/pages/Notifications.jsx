@@ -1,5 +1,5 @@
 import React from "react";
-import { Bell, CheckCircle2, Info, AlertTriangle, Calendar as CalendarIcon, Clock, X } from "lucide-react";
+import { Bell, CheckCircle2, AlertTriangle, Calendar as CalendarIcon, Clock, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";

@@ -31,7 +31,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import {
   Play, Download, Share2, MoreVertical, Clock,
-  Film, Eye, Calendar, Search, Trash2, Users, Monitor, MessageSquare, Video, CalendarIcon
+  Film, Calendar, Search, Trash2, Users, Monitor, MessageSquare, Video, CalendarIcon
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteRecording, getRecordings } from "../api/recordingApi";

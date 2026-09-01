@@ -183,9 +183,25 @@ export function LoginForm() {
     onError: (error) => console.log(error),
   });
 
+  const isAppleConfigured = Boolean(process.env.REACT_APP_APPLE_CLIENT_ID);
+
   const handleFacebookLogin = () => {
+    if (!process.env.REACT_APP_FACEBOOK_APP_ID) {
+      toast({
+        title: t("auth.login.facebookFailedTitle", "Facebook Sign-In"),
+        description: t("auth.login.facebookUnavailable", "Facebook Sign-In is not configured."),
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!window.FB) {
       console.error("FB SDK not loaded");
+      toast({
+        title: t("auth.login.facebookFailedTitle", "Facebook Sign-In"),
+        description: t("auth.login.facebookLoading", "Facebook SDK is still loading."),
+        variant: "destructive",
+      });
       return;
     }
 
@@ -243,7 +259,9 @@ export function LoginForm() {
   const handleAppleUnavailable = () => {
     toast({
       title: t("auth.login.appleFailedTitle"),
-      description: appleSdkError
+      description: !isAppleConfigured
+        ? t("auth.login.appleUnavailable", "Apple Sign-In is not configured.")
+        : appleSdkError
         ? t("auth.login.appleUnavailable")
         : t("auth.login.appleLoading"),
       variant: "destructive",
@@ -281,7 +299,7 @@ export function LoginForm() {
           <span>{t("common.google")}</span>
         </button>
 
-        {appleSdkReady ? (
+        {appleSdkReady && isAppleConfigured ? (
           <AppleLogin
             clientId={process.env.REACT_APP_APPLE_CLIENT_ID}
             redirectURI={process.env.REACT_APP_APPLE_REDIRECT_URI}

@@ -98,10 +98,8 @@ const Dashboard = () => {
   }
 
   const user = userQuery[0]?.data?.user;
-  const roomsData = userQuery[1]?.data;
   const dashboardStats = getNumericDashboardStats(userQuery[2]?.data);
   const meetingsData = userQuery[3]?.data || [];
-  const personalRoomId = roomsData?.personal_room?.id;
 
   return (
     <div className="flex flex-col gap-8 pb-10">

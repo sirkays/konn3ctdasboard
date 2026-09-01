@@ -3,17 +3,16 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Separator } from "../components/ui/separator";
 import { 
   Video, Plus, Copy, MoreVertical, Users, Globe, Lock, Trash2, ExternalLink, LockKeyhole, ChevronDown, ChevronUp 
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-  createMeeting, deleteRoom, getMeetings, getRooms, startMeeting, manageAccessCode, limitUser, bannerUpload, transferRoom,
+  deleteRoom, getMeetings, getRooms, startMeeting, manageAccessCode, limitUser, bannerUpload, transferRoom,
 } from "../api/roomsApi";
 import {
-  Dialog, DialogContent, DialogTrigger, DialogDescription, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogTitle,
 } from "../components/ui/dialog";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,

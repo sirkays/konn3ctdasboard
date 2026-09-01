@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, KeyRound, CalendarDays } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
