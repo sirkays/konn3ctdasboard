@@ -56,6 +56,10 @@ const Recordings = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const PAGE_SIZE = 12;
+  const recordings = useMemo(
+    () => (Array.isArray(recordingQuery.data?.data) ? recordingQuery.data.data : []),
+    [recordingQuery.data]
+  );
 
   useEffect(() => {
     if (!openDeleteDialog) setRecordIdToDelete(null);
@@ -70,22 +74,23 @@ const Recordings = () => {
   });
 
   const filteredRecordings = useMemo(() => {
-    return (
-      recordingQuery.data?.data?.filter((item) => {
-        const matchesSearch = item.name
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+    const normalizedSearchTerm = searchTerm.trim().toLowerCase();
 
-        let matchesDate = true;
-        if (selectedDate) {
-          const itemDate = new Date(Number(item.startTime));
-          matchesDate = itemDate.toDateString() === selectedDate.toDateString();
-        }
+    return recordings.filter((item) => {
+      const recordingName = String(item?.name ?? "");
+      const matchesSearch = recordingName
+        .toLowerCase()
+        .includes(normalizedSearchTerm);
 
-        return matchesSearch && matchesDate;
-      }) || []
-    );
-  }, [recordingQuery.data, searchTerm, selectedDate]);
+      let matchesDate = true;
+      if (selectedDate) {
+        const itemDate = new Date(Number(item?.startTime));
+        matchesDate = !Number.isNaN(itemDate.getTime()) && itemDate.toDateString() === selectedDate.toDateString();
+      }
+
+      return matchesSearch && matchesDate;
+    });
+  }, [recordings, searchTerm, selectedDate]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRecordings.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -102,23 +107,27 @@ const Recordings = () => {
   /* =========================
      Calculations for Stats
   ========================= */
-  const allRecordings = recordingQuery.data?.data || [];
+  const allRecordings = recordings;
   const totalRecordingsCount = allRecordings.length;
   
   const totalDurationMinutes = allRecordings.reduce((acc, curr) => {
-    return acc + ((curr.endTime - curr.startTime) / (1000 * 60));
+    const startTime = Number(curr?.startTime);
+    const endTime = Number(curr?.endTime);
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime < startTime) return acc;
+
+    return acc + ((endTime - startTime) / (1000 * 60));
   }, 0);
   const totalDurationStr = totalDurationMinutes > 60 
     ? `${Math.floor(totalDurationMinutes / 60)}h ${Math.round(totalDurationMinutes % 60)}m` 
     : `${Math.round(totalDurationMinutes)}m`;
 
-  const totalParticipants = allRecordings.reduce((acc, curr) => acc + (curr.participants || 0), 0);
+  const totalParticipants = allRecordings.reduce((acc, curr) => acc + (Number(curr?.participants) || 0), 0);
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   const thisMonthCount = allRecordings.filter(r => {
-    const d = new Date(Number(r.startTime));
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    const d = new Date(Number(r?.startTime));
+    return !Number.isNaN(d.getTime()) && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   }).length;
 
   /* =========================
@@ -157,9 +166,18 @@ const Recordings = () => {
   };
 
   const formatDurationBadge = (start, end) => {
-    const mins = ((end - start) / (1000 * 60));
+    const startTime = Number(start);
+    const endTime = Number(end);
+    if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || endTime < startTime) return "0m";
+
+    const mins = ((endTime - startTime) / (1000 * 60));
     if (mins >= 60) return `${Math.floor(mins / 60)}h ${Math.round(mins % 60)}m`;
     return `${Math.round(mins)}m`;
+  };
+
+  const formatRecordingDate = (startTime) => {
+    const timestamp = Number(startTime);
+    return Number.isFinite(timestamp) ? formatDate(timestamp) : t("common.states.unknown", "Unknown");
   };
 
   const colors = [
@@ -272,7 +290,9 @@ const Recordings = () => {
         {paginatedRecordings.map((rec, index) => {
           const thumbColor = colors[index % colors.length];
           const durationStr = formatDurationBadge(rec.startTime, rec.endTime);
-          const sizeStr = byteToMB(rec.size);
+          const sizeStr = byteToMB(Number(rec.size) || 0);
+          const recordingName = String(rec.name ?? t("recordings.untitled", "Untitled recording"));
+          const participants = Number(rec.participants) || 0;
 
           return (
             <Card key={rec.recordID} className="rounded-2xl border-border/60 bg-surface hover:shadow-lg hover:shadow-brand-blue/5 transition-all duration-300 overflow-hidden group">
@@ -295,8 +315,8 @@ const Recordings = () => {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold text-foreground truncate" title={rec.name}>{rec.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{formatDate(Number(rec.startTime))}</p>
+                    <h3 className="text-sm font-bold text-foreground truncate" title={recordingName}>{recordingName}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{formatRecordingDate(rec.startTime)}</p>
                   </div>
                   
                   {/* MoreVertical Menu */}
@@ -330,7 +350,7 @@ const Recordings = () => {
 
                 <div className="flex items-center justify-between pt-3 border-t border-border/40">
                   <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground">
-                    <span className="flex items-center gap-1" title={`${rec.participants} Participants`}><Users className="h-3.5 w-3.5" /> {rec.participants}</span>
+                    <span className="flex items-center gap-1" title={`${participants} Participants`}><Users className="h-3.5 w-3.5" /> {participants}</span>
                     <span className="w-1 h-1 rounded-full bg-border" />
                     <span>{sizeStr} MB</span>
                   </div>

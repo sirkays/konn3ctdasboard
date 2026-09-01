@@ -25,16 +25,32 @@ const AttendanceList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [meetingsMeta, setMeetingsMeta] = useState({
+    current_page: 1,
+    last_page: 1,
+    next_page_url: null,
+    prev_page_url: null,
+    from: null,
+    total: 0,
+  });
 
   const navigate = useNavigate();
-  const PAGE_SIZE = 12;
 
   useEffect(() => {
     const fetchMeetings = async () => {
       try {
         setLoading(true);
-        const data = await getMeetings();
-        setMeetings(data || []);
+        setError(null);
+        const data = await getMeetings(currentPage);
+        setMeetings(Array.isArray(data?.data) ? data.data : []);
+        setMeetingsMeta({
+          current_page: Number(data?.current_page) || currentPage,
+          last_page: Number(data?.last_page) || 1,
+          next_page_url: data?.next_page_url ?? null,
+          prev_page_url: data?.prev_page_url ?? null,
+          from: Number(data?.from) || null,
+          total: Number(data?.total) || 0,
+        });
       } catch (err) {
         console.error("Failed to fetch meetings:", err);
         setError(t("attendance.list.states.loadError", "Failed to load attendance list."));
@@ -44,15 +60,14 @@ const AttendanceList = () => {
     };
 
     fetchMeetings();
-  }, [t]);
+  }, [currentPage, t]);
 
   const handleViewParticipants = (meetingId, identifier) => {
     navigate(`/attendance-details/${meetingId}/${identifier}`);
   };
 
-  const totalPages = Math.max(1, Math.ceil(meetings.length / PAGE_SIZE));
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const paginatedMeetings = meetings.slice(pageStart, pageStart + PAGE_SIZE);
+  const activePage = Number(meetingsMeta.current_page) || currentPage;
+  const totalPages = Math.max(1, Number(meetingsMeta.last_page) || 1);
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
@@ -95,7 +110,7 @@ const AttendanceList = () => {
         <div className="flex items-center gap-2 rounded-xl bg-surface border border-border/60 p-2 shadow-sm">
           <div className="px-3 py-1">
             <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Total Meetings</p>
-            <p className="text-lg font-bold text-foreground leading-none mt-1">{meetings.length}</p>
+            <p className="text-lg font-bold text-foreground leading-none mt-1">{meetingsMeta.total}</p>
           </div>
         </div>
       </div>
@@ -117,7 +132,7 @@ const AttendanceList = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
-            {paginatedMeetings.map((meeting, index) => (
+            {meetings.map((meeting, index) => (
               <Card 
                 key={meeting.id || index} 
                 className="group relative overflow-hidden rounded-2xl border-border/60 bg-surface shadow-sm hover:shadow-md hover:border-brand-green/30 transition-all duration-300 flex flex-col"
@@ -130,7 +145,7 @@ const AttendanceList = () => {
                       <span className="truncate max-w-[120px]">{meeting.host || t("attendance.common.notAvailable", "N/A")}</span>
                     </div>
                     <span className="text-xs font-bold text-muted-foreground bg-black/5 px-2 py-1 rounded-md">
-                      #{pageStart + index + 1}
+                      #{(Number(meetingsMeta.from) || 1) + index}
                     </span>
                   </div>
 
@@ -165,7 +180,7 @@ const AttendanceList = () => {
                     <button
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                      disabled={currentPage === 1}
+                      disabled={meetingsMeta.prev_page_url === null || activePage <= 1}
                       aria-label={t("components.pagination.previousAriaLabel", "Previous")}
                       className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -174,14 +189,14 @@ const AttendanceList = () => {
                   </PaginationItem>
                   <PaginationItem>
                     <span className="text-sm font-medium text-foreground px-3">
-                      {currentPage} <span className="text-muted-foreground font-normal">/ {totalPages}</span>
+                      {activePage} <span className="text-muted-foreground font-normal">/ {totalPages}</span>
                     </span>
                   </PaginationItem>
                   <PaginationItem>
                     <button
                       type="button"
                       onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                      disabled={currentPage === totalPages}
+                      disabled={meetingsMeta.next_page_url == null || activePage >= totalPages}
                       aria-label={t("components.pagination.nextAriaLabel", "Next")}
                       className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-50"
                     >

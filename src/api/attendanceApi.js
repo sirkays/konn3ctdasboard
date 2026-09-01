@@ -4,26 +4,58 @@ const API = api;
 const AI_BASE_URL = process.env.REACT_APP_API_BOT;
 
 
-export const getMeetings = async () => {
+const mapMeetingAttendanceRecord = (item) => ({
+  id: item.id,
+  meeting_id: item.meeting_id,
+  host: item.room_info?.name || "Unknown Room",
+  name: item.name,
+  date: new Date(item.created_at).toLocaleDateString(),
+  time: new Date(item.created_at).toLocaleTimeString(),
+  identifier: item.identifier,
+  status: item.status,
+});
+
+const buildMeetingsPage = (payload) => {
+  if (payload && typeof payload === "object" && Array.isArray(payload.data)) {
+    return {
+      ...payload,
+      data: payload.data.map(mapMeetingAttendanceRecord),
+    };
+  }
+
+  if (Array.isArray(payload)) {
+    return {
+      data: payload.map(mapMeetingAttendanceRecord),
+      current_page: 1,
+      last_page: 1,
+      next_page_url: null,
+      prev_page_url: null,
+      from: payload.length > 0 ? 1 : null,
+      per_page: payload.length,
+      total: payload.length,
+    };
+  }
+
+  return {
+    data: [],
+    current_page: 1,
+    last_page: 1,
+    next_page_url: null,
+    prev_page_url: null,
+    from: null,
+    per_page: 0,
+    total: 0,
+  };
+};
+
+export const getMeetings = async (page = 1) => {
   try {
-    const response = await API.get("/meeting-attendance");
+    const response = await API.get("/meeting-attendance", {
+      params: { page },
+    });
     const result = response.data;
 
-    const records =
-      result?.data?.data && Array.isArray(result.data.data)
-        ? result.data.data
-        : [];
-
-    return records.map((item) => ({
-      id: item.id,
-      meeting_id: item.meeting_id,
-      host: item.room_info?.name || "Unknown Room",
-      name: item.name,
-      date: new Date(item.created_at).toLocaleDateString(),
-      time: new Date(item.created_at).toLocaleTimeString(),
-      identifier: item.identifier,
-      status: item.status,
-    }));
+    return buildMeetingsPage(result?.data);
   } catch (error) {
     console.error("Error fetching meetings:", error);
     throw error;
