@@ -3,7 +3,12 @@ import { facebookSdkUrl } from "../lib/externalLinks";
 
 export default function useFacebookSDK() {
   useEffect(() => {
-    if (document.getElementById("facebook-jssdk") || !facebookSdkUrl) return;
+    if (
+      !process.env.REACT_APP_FACEBOOK_APP_ID ||
+      document.getElementById("facebook-jssdk") ||
+      !facebookSdkUrl
+    )
+      return;
 
     const script = document.createElement("script");
     script.id = "facebook-jssdk";

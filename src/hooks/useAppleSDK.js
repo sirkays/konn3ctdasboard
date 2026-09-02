@@ -12,10 +12,17 @@ const isAppleSdkReady = () =>
   typeof window !== "undefined" && Boolean(window.AppleID?.auth);
 
 export default function useAppleSDK() {
-  const [ready, setReady] = useState(isAppleSdkReady);
+  const isConfigured = Boolean(process.env.REACT_APP_APPLE_CLIENT_ID);
+  const [ready, setReady] = useState(() => isConfigured && isAppleSdkReady());
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    if (!isConfigured) {
+      setReady(false);
+      setError(false);
+      return undefined;
+    }
+
     if (isAppleSdkReady()) {
       setReady(true);
       setError(false);
@@ -53,7 +60,7 @@ export default function useAppleSDK() {
       script.removeEventListener("load", handleLoad);
       script.removeEventListener("error", handleError);
     };
-  }, []);
+  }, [isConfigured]);
 
-  return { ready, error };
+  return { ready: isConfigured && ready, error };
 }
