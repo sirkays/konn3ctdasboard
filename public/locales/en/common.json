@@ -481,6 +481,7 @@
       "roomPlaceholder": "Enter meeting room name or ID",
       "namePlaceholder": "Enter your name",
       "emailPlaceholder": "Enter your email address",
+      "accessCodePlaceholder": "Enter access code",
       "submit": "Konn3ct",
       "toasts": {
         "meetingLinkMissing": "Meeting link is not configured.",
@@ -491,7 +492,8 @@
         "roomNameMin": "Room name must be at least 2 characters long.",
         "roomNameWhitespace": "Room name cannot be empty or whitespace.",
         "nameMin": "Username must be at least 2 characters long.",
-        "nameWhitespace": "Username cannot be empty or whitespace."
+        "nameWhitespace": "Username cannot be empty or whitespace.",
+        "accessCodeRequired": "Access code is required."
       }
     }
   },

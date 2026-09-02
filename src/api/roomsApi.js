@@ -46,13 +46,27 @@ export const deleteRoom = async (id) => {
 };
 
 export const joinRoom = async (data) => {
-  const { roomName, ...body } = data;
+  const { roomName, cam = true, mic = true, mobile = false, ...body } = data;
+  const mediaPreferences = {
+    cam: cam ? 1 : 0,
+    mic: mic ? 1 : 0,
+    mobile: mobile ? 1 : 0,
+  };
+
   try {
     if (Number.isFinite(Number(roomName))) {
-      const res = await api.post("/join-room", { id: roomName, ...body });
+      const res = await api.post("/join-room", {
+        id: roomName,
+        ...body,
+        ...mediaPreferences,
+      });
       return res.data;
     } else {
-      const res = await api.post("/kv4/join-room", { room: roomName, ...body });
+      const res = await api.post("/kv4/join-room", {
+        room: roomName,
+        ...body,
+        ...mediaPreferences,
+      });
       return res.data;
     }
   } catch (error) {
