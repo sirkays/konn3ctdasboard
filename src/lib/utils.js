@@ -12,21 +12,29 @@ export const capitalize = (value = "") => {
 };
 
 export const formatDate = (dateString, time = true) => {
-  // Create a Date object from the input string
+  if (!dateString) return "";
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "";
 
-  // Get the components of the date
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  const monthName = months[date.getMonth()];
   const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const year = date.getFullYear();
 
-  // Return the formatted string
-  return (
-    `${year}-${month}-${day}` + (time ? ` ${hours}:${minutes}:${seconds}` : "")
-  );
+  if (!time) {
+    return `${monthName} ${day}, ${year}`;
+  }
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  const formattedHours = hours ? String(hours).padStart(2, "0") : "12";
+
+  return `${monthName} ${day}, ${year} • ${formattedHours}:${minutes} ${ampm}`;
 };
 
 export const byteToMB = (byte) => {

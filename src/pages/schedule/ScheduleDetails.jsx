@@ -121,7 +121,7 @@ const normalizeSchedule = (schedule) => {
     toTime: schedule?.endTime ?? source.totime ?? source.endtime ?? source.end_time ?? fallbackMeeting.totime,
     timezone: schedule?.timezone ?? source.timezone ?? fallbackMeeting.timezone,
     recurrence: source.recurrence ?? schedule?.recurrence ?? "once",
-    description: schedule?.description ?? source.description ?? fallbackMeeting.description,
+    description: schedule?.description ?? schedule?.additional ?? source.description ?? source.additional ?? "",
     roomName,
     guests: guests.length > 0 ? guests : normalizeGuestList(fallbackMeeting.guest),
     joinLink,

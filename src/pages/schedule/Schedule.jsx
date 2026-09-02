@@ -97,7 +97,32 @@ const normalizeMeetings = (data) => {
         ? data.data.data
         : [];
 
-  return meetings
+  const seenIds = new Set();
+  const seenSignatures = new Set();
+  const uniqueMeetings = [];
+
+  for (const meeting of meetings) {
+    if (!meeting) continue;
+
+    // Check unique database ID
+    if (meeting.id != null) {
+      if (seenIds.has(meeting.id)) continue;
+      seenIds.add(meeting.id);
+    }
+
+    // Check duplicate session signature (title + date + time + room)
+    const signature = `${meeting.title ?? ''}-${meeting.date ?? ''}-${meeting.time ?? meeting.fromtime ?? ''}-${meeting.roomname ?? meeting.room_id ?? ''}`;
+    if (signature !== "---" && seenSignatures.has(signature)) {
+      continue;
+    }
+    if (signature !== "---") {
+      seenSignatures.add(signature);
+    }
+
+    uniqueMeetings.push(meeting);
+  }
+
+  return uniqueMeetings
     .map((meeting, index) => {
       const date = parseMeetingDate(meeting.date ?? meeting.start_date ?? meeting.scheduled_date);
       const guestList = String(meeting.guest ?? meeting.guests ?? "")
@@ -120,7 +145,7 @@ const normalizeMeetings = (data) => {
         time: meeting.time ?? meeting.fromtime,
         endTime: meeting.totime ?? meeting.endtime ?? meeting.end_time,
         timezone: meeting.timezone ?? "Africa/Lagos",
-        description: meeting.description ?? "",
+        description: meeting.description ?? meeting.additional ?? "",
         roomName: meeting.roomname ?? meeting.room_name ?? meeting.room ?? "",
         guestList,
         joinLink:
@@ -159,22 +184,35 @@ const getSchedulePagination = (data, fallbackCount) => {
   };
 };
 
+const formatFullDate = (date) =>
+  new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(date);
+
 export default function Schedule() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [filterBySelectedDate, setFilterBySelectedDate] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
   const meetingsQuery = useQuery({
     queryKey: ["schedules", currentPage],
     queryFn: () => getSchedules({ page: currentPage }),
     keepPreviousData: true,
   });
+
   const meetings = useMemo(() => normalizeMeetings(meetingsQuery.data), [meetingsQuery.data]);
   const schedulePagination = useMemo(
     () => getSchedulePagination(meetingsQuery.data, meetings.length),
     [meetings.length, meetingsQuery.data]
   );
+
+  const selectedDateMeetings = useMemo(
+    () => meetings.filter((meeting) => isSameDay(meeting.date, selectedDate)),
+    [meetings, selectedDate]
+  );
+
+  const displayedMeetings = filterBySelectedDate ? selectedDateMeetings : meetings;
 
   const cancelScheduleMutation = useMutation({
     mutationFn: cancelSchedule,
@@ -191,11 +229,20 @@ export default function Schedule() {
     },
   });
 
-  useEffect(() => {
-    if (meetings.length > 0) {
-      setSelectedDate(meetings[0].date);
-    }
-  }, [meetings]);
+  const handleSelectDate = (day) => {
+    setSelectedDate(day);
+    setFilterBySelectedDate(true);
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setSelectedDate(now);
+    setFilterBySelectedDate(true);
+  };
+
+  const handleClearDateFilter = () => {
+    setFilterBySelectedDate(false);
+  };
 
   const handleCopyMeetingLink = async (meeting) => {
     if (!meeting?.joinLink) {
@@ -242,7 +289,7 @@ export default function Schedule() {
   const totalPages = Math.max(1, schedulePagination.totalPages);
   const totalMeetings = schedulePagination.total;
 
-  const hasSessionOnDate = (date) => meetings.some((meeting) => isSameDay(meeting.date, date));
+  const getDaySessions = (day) => meetings.filter((meeting) => isSameDay(meeting.date, day));
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, totalPages));
@@ -271,7 +318,7 @@ export default function Schedule() {
         </div>
         <Button
           className="h-11 w-full rounded-xl bg-brand-green px-5 font-bold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854] sm:w-auto"
-          onClick={() => navigate("/dashboard/schedule/new")}
+          onClick={() => navigate("/dashboard/schedule/new", { state: filterBySelectedDate ? { date: selectedDate } : undefined })}
         >
           <Plus className="h-4 w-4" />
           Schedule Session
@@ -299,7 +346,7 @@ export default function Schedule() {
               <Button
                 variant="outline"
                 className="h-10 rounded-xl border-border/70 bg-surface px-4 text-sm font-bold hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
-                onClick={() => setSelectedDate(new Date())}
+                onClick={handleToday}
               >
                 Today
               </Button>
@@ -316,37 +363,53 @@ export default function Schedule() {
 
           <div className="grid grid-cols-7">
             {weekDays.map((day, index) => {
-              const active = isSameDay(day, selectedDate);
-              const hasSession = hasSessionOnDate(day);
+              const isSelected = isSameDay(day, selectedDate);
+              const active = isSelected && filterBySelectedDate;
+              const isDayToday = isSameDay(day, new Date());
+              const daySessions = getDaySessions(day);
+              const sessionCount = daySessions.length;
 
               return (
                 <button
                   key={day.toISOString()}
                   type="button"
-                  onClick={() => setSelectedDate(day)}
-                  className={`flex min-h-[110px] flex-col items-center justify-start gap-3 px-2 py-5 transition-colors ${
+                  onClick={() => handleSelectDate(day)}
+                  className={`relative flex min-h-[110px] flex-col items-center justify-start gap-2.5 px-2 py-4 transition-all ${
                     active
                       ? "bg-brand-green/10"
-                      : "bg-surface hover:bg-black/[0.02] dark:hover:bg-white/[0.04]"
+                      : isSelected
+                      ? "bg-black/[0.03] dark:bg-white/[0.04]"
+                      : "bg-surface hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
                   }`}
                 >
-                  <span className="text-xs font-extrabold text-muted-foreground sm:text-sm">
+                  <span className={`text-xs font-extrabold sm:text-sm ${active ? "text-brand-green" : "text-muted-foreground"}`}>
                     {WEEKDAY_LABELS[index]}
                   </span>
                   <span
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-extrabold transition-all ${
                       active
-                        ? "bg-brand-green text-white shadow-[0_8px_18px_rgba(32,116,80,0.28)]"
+                        ? "bg-brand-green text-white shadow-[0_8px_18px_rgba(32,116,80,0.28)] scale-105"
+                        : isDayToday
+                        ? "border-2 border-brand-green text-brand-green font-bold"
+                        : isSelected
+                        ? "border border-border text-foreground font-bold"
                         : "text-foreground"
                     }`}
                   >
                     {day.getDate()}
                   </span>
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      hasSession ? "bg-brand-green" : "bg-transparent"
-                    }`}
-                  />
+                  {sessionCount > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <span className="h-2 w-2 rounded-full bg-brand-green" />
+                      {sessionCount > 1 && (
+                        <span className="text-[10px] font-bold text-brand-green">
+                          {sessionCount}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-transparent" />
+                  )}
                 </button>
               );
             })}
@@ -355,9 +418,28 @@ export default function Schedule() {
       </Card>
 
       <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-xl font-extrabold text-foreground">Upcoming Sessions</h2>
-          <p className="text-base font-medium text-muted-foreground">{totalMeetings} total</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-extrabold text-foreground">
+              {filterBySelectedDate ? `Sessions for ${formatFullDate(selectedDate)}` : "Upcoming Sessions"}
+            </h2>
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-muted text-muted-foreground">
+              {displayedMeetings.length} {displayedMeetings.length === 1 ? "session" : "sessions"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {filterBySelectedDate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearDateFilter}
+                className="h-8 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground"
+              >
+                View all upcoming ({totalMeetings})
+              </Button>
+            )}
+          </div>
         </div>
 
         {meetingsQuery.isError ? (
@@ -369,16 +451,51 @@ export default function Schedule() {
         ) : meetings.length === 0 ? (
           <Card className="rounded-2xl border-border/60 bg-surface">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <CalendarDays className="h-8 w-8 text-brand-green/60" />
-              <p className="mt-3 text-base font-bold text-foreground">No upcoming sessions</p>
+              <CalendarDays className="h-10 w-10 text-brand-green/60 mb-2" />
+              <p className="mt-2 text-base font-bold text-foreground">No upcoming sessions</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Schedule a meeting or webinar to see it here.
               </p>
+              <Button
+                className="mt-4 bg-brand-green hover:bg-[#287854] text-white font-bold h-9 px-4 rounded-xl shadow-md shadow-brand-green/20"
+                onClick={() => navigate("/dashboard/schedule/new")}
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Schedule Session
+              </Button>
+            </CardContent>
+          </Card>
+        ) : filterBySelectedDate && displayedMeetings.length === 0 ? (
+          <Card className="rounded-2xl border-border/60 bg-surface">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <CalendarDays className="h-10 w-10 text-brand-green/60 mb-2" />
+              <p className="mt-2 text-base font-bold text-foreground">
+                No sessions scheduled for {formatFullDate(selectedDate)}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground max-w-md">
+                You do not have any meetings or webinars planned on this date.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+                <Button
+                  className="bg-brand-green hover:bg-[#287854] text-white font-bold h-9 px-4 rounded-xl shadow-md shadow-brand-green/20"
+                  onClick={() => navigate("/dashboard/schedule/new", { state: { date: selectedDate } })}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Schedule for this date
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-9 px-4 rounded-xl"
+                  onClick={handleClearDateFilter}
+                >
+                  View all upcoming ({totalMeetings})
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
           <div className="flex flex-col gap-5">
-            {meetings.map((meeting, index) => {
+            {displayedMeetings.map((meeting, index) => {
               const { time, period } = splitFormattedTime(meeting.time);
               const color = SESSION_COLORS[index % SESSION_COLORS.length];
 
