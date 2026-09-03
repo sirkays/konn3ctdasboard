@@ -232,15 +232,29 @@ const Rooms = () => {
             <Plus className="w-4 h-4 mr-2" />
             {t("rooms.actions.scheduleMeeting")}
           </Button>
-          <Button 
-            className="h-11 rounded-xl px-5 bg-brand-green hover:bg-[#287854] text-white shadow-lg shadow-brand-green/20 transition-all flex-1 sm:flex-none"
-            onClick={() => navigate("/dashboard/rooms/new")}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {t("rooms.actions.createRoom")}
-          </Button>
+          {roomsData.can_create_room !== false && (
+            <Button 
+              className="h-11 rounded-xl px-5 bg-brand-green hover:bg-[#287854] text-white shadow-lg shadow-brand-green/20 transition-all flex-1 sm:flex-none"
+              onClick={() => navigate("/dashboard/rooms/new")}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {t("rooms.actions.createRoom")}
+            </Button>
+          )}
         </div>
       </div>
+
+      {roomsData.is_team_member && (
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-blue/20 bg-brand-blue/5 p-4 text-sm text-foreground">
+          <Users className="h-5 w-5 shrink-0 text-brand-blue" />
+          <div>
+            <p className="font-semibold text-foreground">Shared Team Workspace</p>
+            <p className="text-xs text-muted-foreground">
+              You have access to shared team meeting rooms provided by your organization. You can host and join meetings directly.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -303,7 +317,14 @@ const Rooms = () => {
                       <Video className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-foreground truncate">{room.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-foreground truncate">{room.name}</h3>
+                        {room.is_team_room ? (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-blue/10 border border-brand-blue/20 px-2 py-0.5 text-[10px] font-bold text-brand-blue dark:bg-blue-500/20 dark:text-blue-300">
+                            <Users className="h-3 w-3" /> Team Room
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">/{room.url}</p>
                     </div>
                   </div>
@@ -337,10 +358,14 @@ const Rooms = () => {
                             <button onClick={() => { setSelectedRoomId(room.id); setOpenTransferDialog(true); setOpenDropdownId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-black/[0.04]">
                               <Users className="h-4 w-4 text-muted-foreground" /> {t("rooms.manageMenu.transferRoom", "Transfer Room")}
                             </button>
-                            <div className="h-px w-full bg-border/60 my-1" />
-                            <button onClick={() => { handleDeleteClick(room.id); setOpenDropdownId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 hover:bg-red-500/10">
-                              <Trash2 className="h-4 w-4" /> {t("common.actions.delete", "Delete")}
-                            </button>
+                            {(!room.is_team_room || roomsData.can_create_room !== false) && (
+                              <>
+                                <div className="h-px w-full bg-border/60 my-1" />
+                                <button onClick={() => { handleDeleteClick(room.id); setOpenDropdownId(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 hover:bg-red-500/10">
+                                  <Trash2 className="h-4 w-4" /> {t("common.actions.delete", "Delete")}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </>

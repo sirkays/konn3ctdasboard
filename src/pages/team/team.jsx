@@ -73,7 +73,8 @@ import UpgradeTeam from "./component/upgradeTeam";
 
 const TEAM_QUERY_KEY = ["team-list"];
 const API_BASE_URL = String(process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
-const TEAM_ACTIVATION_LINK_BASE = `${API_BASE_URL}/teams/activate`;
+const DASHBOARD_BASE_URL = String(process.env.REACT_APP_SITE_URL || window.location.origin).replace(/\/$/, "");
+const TEAM_ACTIVATION_LINK_BASE = `${DASHBOARD_BASE_URL}/team-invite`;
 const roleOptions = ["Owner", "Admin", "Member"];
 
 const roleStyles = {
@@ -146,8 +147,8 @@ const buildTeamInviteLink = (value) => {
   const rawValue = String(value || "").trim();
   if (!rawValue) return "";
   if (/^https?:\/\//i.test(rawValue)) return rawValue;
-  if (rawValue.startsWith("/")) return `${API_BASE_URL}${rawValue}`;
-  if (rawValue.includes("/")) return `${API_BASE_URL}/${rawValue.replace(/^\/+/, "")}`;
+  if (rawValue.startsWith("/")) return `${DASHBOARD_BASE_URL}${rawValue}`;
+  if (rawValue.includes("/")) return `${DASHBOARD_BASE_URL}/${rawValue.replace(/^\/+/, "")}`;
   return rawValue;
 };
 
@@ -155,8 +156,8 @@ const buildActivationLink = (token) => {
   const rawToken = String(token || "").trim();
   if (!rawToken) return "";
   if (/^https?:\/\//i.test(rawToken)) return rawToken;
-  if (rawToken.startsWith("/")) return `${API_BASE_URL}${rawToken}`;
-  if (rawToken.includes("/")) return `${API_BASE_URL}/${rawToken.replace(/^\/+/, "")}`;
+  if (rawToken.startsWith("/")) return `${DASHBOARD_BASE_URL}${rawToken}`;
+  if (rawToken.includes("/")) return `${DASHBOARD_BASE_URL}/${rawToken.replace(/^\/+/, "")}`;
   return `${TEAM_ACTIVATION_LINK_BASE}/${encodeURIComponent(rawToken)}`;
 };
 
@@ -344,6 +345,14 @@ const Team = () => {
     queryFn: getUser,
   });
 
+  const teamContext =
+    profileQuery.data?.team_context ||
+    teamQuery.data?.team_context ||
+    {};
+  const currentUserRole = teamContext.role || "Owner";
+  const canManageTeam = teamContext.can_manage !== false && currentUserRole !== "Member";
+  const isRegularMember = currentUserRole === "Member";
+
   const members = useMemo(
     () => getPossibleArray(teamQuery.data).map(normalizeMember),
     [teamQuery.data]
@@ -412,33 +421,52 @@ const Team = () => {
             Manage your organization and team members.
           </p>
         </div>
-        <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-          <Button
-            type="button"
-            className="h-11 w-full rounded-xl bg-brand-green px-5 text-sm font-semibold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854] sm:w-auto"
-            onClick={handleInviteClick}
-            disabled={teamQuery.isLoading || profileQuery.isLoading}
-          >
-            <Plus className="h-4 w-4" />
-            Invite Member
-          </Button>
-          <DialogContent
-            className={cn(
-              "max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border-border/60 bg-surface p-5 shadow-2xl sm:p-6",
-              inviteDialogView === "upgrade" ? "max-w-xl" : "max-w-md"
-            )}
-          >
-            {inviteDialogView === "upgrade" ? (
-              <UpgradeTeam onUpgrade={handleUpgrade} />
-            ) : (
-              <InviteTeam
-                isSubmitting={inviteMutation.isPending}
-                onInvite={(payload) => inviteMutation.mutate(payload)}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
+        {canManageTeam ? (
+          <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+            <Button
+              type="button"
+              className="h-11 w-full rounded-xl bg-brand-green px-5 text-sm font-semibold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854] sm:w-auto"
+              onClick={handleInviteClick}
+              disabled={teamQuery.isLoading || profileQuery.isLoading}
+            >
+              <Plus className="h-4 w-4" />
+              Invite Member
+            </Button>
+            <DialogContent
+              className={cn(
+                "max-h-[calc(100vh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-2xl border-border/60 bg-surface p-5 shadow-2xl sm:p-6",
+                inviteDialogView === "upgrade" ? "max-w-xl" : "max-w-md"
+              )}
+            >
+              {inviteDialogView === "upgrade" ? (
+                <UpgradeTeam onUpgrade={handleUpgrade} />
+              ) : (
+                <InviteTeam
+                  isSubmitting={inviteMutation.isPending}
+                  onInvite={(payload) => inviteMutation.mutate(payload)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <div className="flex items-center gap-1.5 rounded-xl border border-border/80 bg-surface px-4 py-2.5 text-xs font-semibold text-muted-foreground">
+            <Shield className="h-4 w-4 text-brand-green" />
+            Member Directory
+          </div>
+        )}
       </div>
+
+      {isRegularMember && (
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-green/20 bg-brand-green/5 p-4 text-sm text-foreground">
+          <Shield className="h-5 w-5 shrink-0 text-brand-green" />
+          <div>
+            <p className="font-semibold text-foreground">Team Directory</p>
+            <p className="text-xs text-muted-foreground">
+              You are viewing the {teamContext.team_name || "team"} directory as a Member. Team Admins and Owners can invite or manage members.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => {
@@ -515,7 +543,7 @@ const Team = () => {
                     Joined
                   </TableHead>
                   <TableHead className="h-12 px-5 text-right text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Actions
+                    {canManageTeam ? "Actions" : "Details"}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -561,7 +589,11 @@ const Team = () => {
                       {member.joined}
                     </TableCell>
                     <TableCell className="px-5 py-4 text-right">
-                      <TeamActions member={member} />
+                      <TeamActions
+                        member={member}
+                        canManageTeam={canManageTeam}
+                        currentUserRole={currentUserRole}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -612,13 +644,14 @@ const StatusLabel = ({ member }) => (
   </span>
 );
 
-const TeamActions = ({ member }) => {
+const TeamActions = ({ member, canManageTeam = true, currentUserRole = "Owner" }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [actionDialog, setActionDialog] = useState(null);
   const isSuspended = member.statusTone === "suspended";
   const isPending = member.statusTone === "pending";
+  const isProtectedTarget = currentUserRole === "Admin" && ["owner", "admin"].includes(member.roleTone);
 
   const invalidateTeam = async () => {
     await queryClient.invalidateQueries({ queryKey: TEAM_QUERY_KEY });
@@ -681,6 +714,26 @@ const TeamActions = ({ member }) => {
   const handleViewProfile = () => {
     setIsDetailOpen(true);
   };
+
+  if (!canManageTeam || isProtectedTarget) {
+    return (
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-black/[0.04] hover:text-foreground"
+          onClick={handleViewProfile}
+        >
+          <UserCircle className="mr-1.5 h-3.5 w-3.5" />
+          View
+        </Button>
+        <DialogContent className="max-h-[calc(100vh-1rem)] w-[calc(100%-1rem)] max-w-xl overflow-y-auto rounded-2xl border-border/60 bg-surface p-5 shadow-2xl sm:p-6">
+          <TeamDetail member={member} enabled={isDetailOpen} />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const handleSuspendToggle = () => {
     suspendMutation.mutate(member.id);

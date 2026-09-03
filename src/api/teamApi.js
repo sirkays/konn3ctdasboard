@@ -66,7 +66,11 @@ export const checkTeamInviteToken = async (token) => {
   return res.data;
 };
 
-export const activateTeamInvite = async (token) => {
-  const res = await publicTeamApi.get(`/teams/activate/${token}`);
+export const activateTeamInvite = async (token, { firstname, lastname, password } = {}) => {
+  const res = await publicTeamApi.post(`/teams/activate/${token}`, {
+    firstname,
+    lastname,
+    password,
+  });
   return res.data;
 };

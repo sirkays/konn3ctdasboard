@@ -73,7 +73,16 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
   const location = useLocation();
   const pathname = location.pathname;
 
-  const items = [
+  const profileQuery = useQuery({
+    queryKey: ["profile"],
+    queryFn: getUser,
+  });
+
+  const isRegularMember =
+    profileQuery.data?.team_context?.is_team_member &&
+    profileQuery.data?.team_context?.role === "Member";
+
+  const allItems = [
     { titleKey: "app.sidebar.home", url: "/", icon: HomeIcon },
 
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
@@ -101,10 +110,13 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: AttendanceIcon,
     },
     
-    
     // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
+
+  const items = isRegularMember
+    ? allItems.filter((item) => !["/payments", "/addons"].includes(item.url))
+    : allItems;
 
   return (
     <div 
