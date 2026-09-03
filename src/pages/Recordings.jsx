@@ -12,12 +12,6 @@ import {
   PaginationLink,
 } from "../components/ui/pagination";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../components/ui/popover";
-import { Calendar as CalendarComponent } from "../components/ui/calendar";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,7 +25,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import {
   Play, Download, Share2, MoreVertical, Clock,
-  Film, Calendar, Search, Trash2, Users, Monitor, MessageSquare, Video, CalendarIcon,
+  Film, Calendar, Search, Trash2, Users, Monitor, MessageSquare, Video,
   CheckCircle2, AlertCircle, Loader2, ExternalLink
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -39,6 +33,7 @@ import { deleteRecording, getRecordings } from "../api/recordingApi";
 import { byteToMB, formatDate } from "../lib/utils";
 import { useToast } from "../hooks/use-toast";
 import { Skeleton } from "../components/ui/skeleton";
+import { BrandedDatePicker } from "../components/ui/branded-date-picker";
 
 const Recordings = () => {
   const { t } = useTranslation();
@@ -402,28 +397,12 @@ const Recordings = () => {
           />
         </div>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={`w-full sm:w-[240px] h-11 justify-start text-left font-normal rounded-xl bg-black/[0.02] border-border/60 hover:bg-black/[0.04] transition-colors ${
-                !selectedDate && "text-muted-foreground"
-              }`}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? formatDate(selectedDate.getTime(), false) : t("recordings.filters.selectDate", "Pick a date")}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 rounded-2xl border-border/60 shadow-lg" align="start">
-            <CalendarComponent
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              initialFocus
-              className="rounded-2xl"
-            />
-          </PopoverContent>
-        </Popover>
+        <BrandedDatePicker
+          value={selectedDate}
+          onChange={setSelectedDate}
+          placeholder={t("recordings.filters.selectDate", "Pick a date")}
+          triggerClassName="sm:w-[240px]"
+        />
 
         {(searchTerm || selectedDate) && (
           <Button

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Bell, Computer, Copy, Lock, Monitor, Shield } from "lucide-react";
+import { Bell, Computer, Lock, Monitor, Shield } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
@@ -8,7 +8,6 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { useToast } from "../../../hooks/use-toast";
-import { getReferralCodeFromRecord, getReferralLinkFromRecord } from "../../../lib/referral";
 import { capitalize, cn } from "../../../lib/utils";
 import { PasswordForm } from "../../profile/PasswordForm";
 import { ProfileForm } from "../../profile/ProfileForm";
@@ -32,14 +31,7 @@ export const SectionHeader = ({ icon: Icon, iconClassName, title, description })
 
 export const ProfileSection = () => {
   const { t } = useTranslation();
-  const { toast } = useToast();
   const userQuery = useQuery({ queryKey: ["profile"], queryFn: getUser });
-
-  const handleCopy = (text) => {
-    if (!text) return;
-    navigator.clipboard.writeText(text);
-    toast({ description: t("profile.toasts.copied") });
-  };
 
   if (userQuery.isLoading) {
     return <Skeleton className="h-[400px] w-full rounded-2xl" />;
@@ -56,10 +48,7 @@ export const ProfileSection = () => {
     );
   }
 
-  const user = userQuery.data?.user ?? {};
   const userPlan = userQuery.data?.user_plan ?? {};
-  const referralCode = getReferralCodeFromRecord(user);
-  const referralLink = getReferralLinkFromRecord(user);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -84,57 +73,6 @@ export const ProfileSection = () => {
               </div>
               <div className="rounded-full bg-brand-green/10 px-3 py-1 text-xs font-bold text-brand-green">
                 {capitalize(userPlan?.status ?? "Active")}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="min-w-0 rounded-2xl border-border/60 bg-surface">
-          <CardContent className="space-y-4 p-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-base font-bold text-foreground">
-                {t("profile.info.referralCode")}
-              </h3>
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 truncate rounded-md bg-black/[0.04] px-2 py-1 font-mono text-sm">
-                  {referralCode || "N/A"}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 rounded-lg"
-                  onClick={() => handleCopy(referralCode)}
-                  disabled={!referralCode}
-                  aria-label={t("profile.actions.copyReferralCode", "Copy referral code")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-1 text-xs font-semibold text-muted-foreground">
-                {t("profile.info.referralLink")}
-              </p>
-              <div className="flex min-w-0 items-center gap-2">
-                <input
-                  type="text"
-                  value={referralLink || ""}
-                  readOnly
-                  placeholder="Not available"
-                  className="min-w-0 flex-1 cursor-pointer truncate rounded-lg border border-border/60 bg-black/[0.02] px-3 py-2 text-sm text-muted-foreground"
-                  onClick={(event) => event.target.select()}
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 shrink-0 rounded-lg"
-                  onClick={() => handleCopy(referralLink)}
-                  disabled={!referralLink}
-                  aria-label={t("profile.actions.copyReferralLink", "Copy referral link")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
               </div>
             </div>
           </CardContent>

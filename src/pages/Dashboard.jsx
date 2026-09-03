@@ -20,6 +20,7 @@ import {
   CardContent,
 } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
+import ReferralCard from "../components/ReferralCard";
 import join from "../assets/icons/add-square.svg";
 import video from "../assets/icons/video-01.svg";
 
@@ -209,6 +210,8 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-700 delay-200">
+          <ReferralCard user={user} />
+
           <Card className="rounded-2xl border-none bg-gradient-to-br from-brand-blue to-[#001D5C] text-white overflow-hidden relative shadow-xl">
             <div className="absolute top-[-20%] right-[-10%] w-[200px] h-[200px] rounded-full bg-white/10 blur-[40px] z-0" />
             <div className="absolute bottom-[-10%] left-[-10%] w-[150px] h-[150px] rounded-full bg-brand-green/30 blur-[40px] z-0" />
