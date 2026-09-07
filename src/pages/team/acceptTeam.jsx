@@ -311,7 +311,7 @@ const AcceptTeam = () => {
               <Button
                 asChild
                 type="button"
-                className="mt-6 h-12 w-full rounded-xl bg-[#207450] text-sm font-semibold text-white shadow-none hover:bg-[#1a5f41] transition-all"
+                className="main-action-button mt-6 h-12 w-full rounded-xl text-sm font-semibold"
               >
                 <Link to="/login" className="flex items-center justify-center gap-2">
                   <span>Continue to Sign In</span>
@@ -327,7 +327,7 @@ const AcceptTeam = () => {
                   activateMutation.isPending ||
                   password.length < 8
                 }
-                className="mt-6 h-12 w-full rounded-xl bg-[#207450] text-sm font-semibold text-white shadow-none hover:bg-[#1a5f41] transition-all disabled:opacity-50"
+                className="main-action-button mt-6 h-12 w-full rounded-xl text-sm font-semibold disabled:opacity-50"
               >
                 {activateMutation.isPending ? (
                   <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />

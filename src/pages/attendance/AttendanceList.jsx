@@ -162,7 +162,7 @@ const AttendanceList = () => {
 
                   <Button
                     onClick={() => handleViewParticipants(meeting.meeting_id, meeting.identifier)}
-                    className="w-full h-10 rounded-xl bg-brand-green/10 text-brand-green hover:bg-brand-green hover:text-white transition-all font-semibold"
+                    className="main-action-button w-full h-10 rounded-xl font-semibold"
                   >
                     <Users className="h-4 w-4 mr-2" />
                     {t("attendance.list.actions.viewParticipants", "View Participants")}

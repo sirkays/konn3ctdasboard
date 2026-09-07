@@ -317,7 +317,7 @@ export default function Schedule() {
           </p>
         </div>
         <Button
-          className="h-11 w-full rounded-xl bg-brand-green px-5 font-bold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854] sm:w-auto"
+          className="main-action-button h-11 w-full rounded-xl px-5 font-bold sm:w-auto"
           onClick={() => navigate("/dashboard/schedule/new", { state: filterBySelectedDate ? { date: selectedDate } : undefined })}
         >
           <Plus className="h-4 w-4" />
@@ -457,7 +457,7 @@ export default function Schedule() {
                 Schedule a meeting or webinar to see it here.
               </p>
               <Button
-                className="mt-4 bg-brand-green hover:bg-[#287854] text-white font-bold h-9 px-4 rounded-xl shadow-md shadow-brand-green/20"
+                className="main-action-button mt-4 h-9 rounded-xl px-4 font-bold"
                 onClick={() => navigate("/dashboard/schedule/new")}
               >
                 <Plus className="h-4 w-4 mr-1.5" />
@@ -477,7 +477,7 @@ export default function Schedule() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
                 <Button
-                  className="bg-brand-green hover:bg-[#287854] text-white font-bold h-9 px-4 rounded-xl shadow-md shadow-brand-green/20"
+                  className="main-action-button h-9 rounded-xl px-4 font-bold"
                   onClick={() => navigate("/dashboard/schedule/new", { state: { date: selectedDate } })}
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
@@ -583,7 +583,7 @@ export default function Schedule() {
                               type="button"
                               onClick={() => handleJoinSession(meeting)}
                               disabled={!meeting.joinLink}
-                              className="h-10 rounded-xl bg-brand-green px-4 text-sm font-bold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854]"
+                              className="main-action-button h-10 rounded-xl px-4 text-sm font-bold"
                             >
                               <Play className="h-4 w-4" />
                               Join

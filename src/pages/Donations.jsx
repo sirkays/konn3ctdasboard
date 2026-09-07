@@ -77,7 +77,7 @@ export default function Donations() {
               {t("donations.success.description", "Your KYC details have been successfully submitted and are currently under review. We will notify you once verified.")}
             </p>
             <Button
-              className="w-full h-12 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] font-semibold text-base transition-all"
+              className="main-action-button w-full h-12 rounded-xl font-semibold text-base"
               onClick={() => setStep("dashboard")}
             >
               {t("common.actions.goToDashboard", "Go to Dashboard")}

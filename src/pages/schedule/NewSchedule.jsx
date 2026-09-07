@@ -1055,7 +1055,7 @@ export default function NewSchedule() {
             <Button
               type="submit"
               disabled={saveScheduleMutation.isPending || saveWebinarMutation.isPending}
-              className="h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white font-bold shadow-lg shadow-brand-green/20"
+              className="main-action-button h-12 px-8 rounded-xl font-bold"
             >
               {(saveScheduleMutation.isPending || saveWebinarMutation.isPending)
                 ? (isEditing ? "Updating..." : mode === "webinar" ? "Creating Webinar..." : "Scheduling...")

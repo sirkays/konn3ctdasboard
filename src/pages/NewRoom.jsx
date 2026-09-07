@@ -225,7 +225,7 @@ export default function NewRoom() {
           <Button variant="outline" type="button" onClick={() => navigate("/rooms")} className="h-12 px-6 rounded-xl border-border/60">
             {t("common.actions.cancel", "Cancel")}
           </Button>
-          <Button disabled={createMeetingMutation.isPending} type="submit" className="h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white font-bold shadow-lg shadow-brand-green/20">
+          <Button disabled={createMeetingMutation.isPending} type="submit" className="main-action-button h-12 px-8 rounded-xl font-bold">
             {createMeetingMutation.isPending ? t("rooms.createForm.creating", "Creating...") : t("rooms.actions.createRoom", "Create Room")}
           </Button>
         </div>

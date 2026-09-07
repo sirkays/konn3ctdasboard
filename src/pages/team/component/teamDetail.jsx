@@ -497,7 +497,7 @@ const TeamDetail = ({ member, enabled = true }) => {
           </DialogClose>
           <Button
             type="button"
-            className="h-11 rounded-xl bg-brand-blue text-sm font-semibold text-white shadow-[0_6px_16px_rgba(0,44,136,0.25)] hover:bg-[#00379f]"
+            className="main-action-button h-11 rounded-xl text-sm font-semibold"
           >
             <Mail className="h-4 w-4" />
             Message

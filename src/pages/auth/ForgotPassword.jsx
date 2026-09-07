@@ -123,7 +123,7 @@ export function ForgotPassword() {
             <button
               onClick={handleResetPassword}
               disabled={loading}
-              className="w-full rounded-lg bg-[#012E89] py-2 text-white"
+              className="main-action-button w-full rounded-lg py-2 font-semibold"
             >
               {loading
                 ? t("auth.forgotPassword.step1.sending")
@@ -155,7 +155,7 @@ export function ForgotPassword() {
             </div>
             <button
               onClick={handleVerifyCode}
-              className="w-full rounded-lg bg-[#012E89] py-2 text-white"
+              className="main-action-button w-full rounded-lg py-2 font-semibold"
             >
               {t("auth.forgotPassword.step2.submit")}
             </button>
@@ -200,7 +200,7 @@ export function ForgotPassword() {
             <button
               onClick={handleUpdatePassword}
               disabled={loading}
-              className="w-full rounded-lg bg-[#012E89] py-2 text-white"
+              className="main-action-button w-full rounded-lg py-2 font-semibold"
             >
               {loading
                 ? t("auth.forgotPassword.step3.updating")
@@ -219,7 +219,7 @@ export function ForgotPassword() {
             </p>
             <button
               onClick={handleGoToLogin}
-              className="w-full rounded-lg bg-[#012E89] py-2 text-white"
+              className="main-action-button w-full rounded-lg py-2 font-semibold"
             >
               {t("auth.forgotPassword.step4.submit")}
             </button>

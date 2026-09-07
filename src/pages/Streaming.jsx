@@ -157,7 +157,7 @@ const Streaming = () => {
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <Button 
-            className="h-11 rounded-xl px-5 bg-brand-blue hover:bg-[#0047E1] text-white shadow-lg shadow-brand-blue/20 transition-all flex-1 sm:flex-none"
+            className="main-action-button h-11 rounded-xl px-5 flex-1 sm:flex-none"
             onClick={() => setOpenDialog(true)}
           >
             <Cast className="w-4 h-4 mr-2" />
@@ -485,7 +485,7 @@ const StreamForm = ({ setOpenDialog }) => {
           )} />
         )}
 
-        <Button type="submit" className="w-full h-11 rounded-xl bg-brand-blue hover:bg-[#0047E1] text-white shadow-lg mt-2" disabled={startStreamMutation.isPending || startComboMutation.isPending}>
+        <Button type="submit" className="main-action-button w-full h-11 rounded-xl mt-2" disabled={startStreamMutation.isPending || startComboMutation.isPending}>
           {startStreamMutation.isPending || startComboMutation.isPending ? "Starting..." : t("streaming.actions.submit")}
         </Button>
       </form>
