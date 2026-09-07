@@ -66,6 +66,10 @@ const getRegistrationCount = (event) =>
   );
 
 const isFreeEvent = (event) => {
+  if (!event || typeof event !== "object" || Object.keys(event).length === 0) {
+    return false;
+  }
+
   const freeValue = getFirstValue(event, ["free", "is_free", "isFree"]);
   const price = getEventPrice(event);
 
@@ -150,21 +154,35 @@ const getParticipantName = (participant) => {
   return fullName || getFirstValue(participant, ["email"], "Guest");
 };
 
-const getRegistrationEventTitle = (registration) =>
-  getFirstValue(
-    registration,
-    ["event_title", "eventTitle", "title", "event_name", "eventName"],
-    getEventTitle(registration?.event)
-  );
+const getRegistrationEvent = (registration) =>
+  registration?.event ||
+  registration?.pre_reg ||
+  registration?.preReg ||
+  registration?.prereg ||
+  null;
 
-const normalizeRecentRegistration = (registration, index = 0) => ({
-  id: getFirstValue(registration, ["id", "reference", "email"], index),
-  name: getParticipantName(registration),
-  email: getFirstValue(registration, ["email"], "-"),
-  eventTitle: getRegistrationEventTitle(registration),
-  status: getPaymentStatus(registration, registration?.event ?? {}),
-  createdAt: getFirstValue(registration, ["created_at", "registered_at", "date"]),
-});
+const getRegistrationEventTitle = (registration) => {
+  const directTitle = getFirstValue(
+    registration,
+    ["event_title", "eventTitle", "title", "event_name", "eventName"]
+  );
+  if (directTitle) return directTitle;
+
+  const event = getRegistrationEvent(registration);
+  return getEventTitle(event);
+};
+
+const normalizeRecentRegistration = (registration, index = 0) => {
+  const event = getRegistrationEvent(registration);
+  return {
+    id: getFirstValue(registration, ["id", "reference", "email"], index),
+    name: getParticipantName(registration),
+    email: getFirstValue(registration, ["email"], "-"),
+    eventTitle: getRegistrationEventTitle(registration),
+    status: getPaymentStatus(registration, event),
+    createdAt: getFirstValue(registration, ["created_at", "registered_at", "date"]),
+  };
+};
 
 const getPaymentStatus = (participant, event) => {
   const status = String(
@@ -174,12 +192,30 @@ const getPaymentStatus = (participant, event) => {
       "status",
       "transaction_status",
     ])
-  );
+  ).trim();
 
-  if (status) return status;
+  if (
+    status &&
+    !["0", "1", "null", "undefined"].includes(status.toLowerCase())
+  ) {
+    const lower = status.toLowerCase();
+    if (lower.includes("paid") || lower.includes("success")) return "Paid";
+    if (lower.includes("free")) return "Free";
+    if (lower.includes("pending")) return "Pending";
+    if (lower.includes("fail")) return "Failed";
+    return status;
+  }
+
   if (isFreeEvent(event)) return "Free";
 
-  return participant?.paid_at || participant?.payment?.paid_at ? "Paid" : "Pending";
+  const isPaid =
+    participant?.paid === 1 ||
+    participant?.paid === "1" ||
+    participant?.paid === true ||
+    !!participant?.paid_at ||
+    !!participant?.payment?.paid_at;
+
+  return isPaid ? "Paid" : "Pending";
 };
 
 const getStatusClassName = (status) => {
