@@ -390,6 +390,7 @@ const CreateEvents = () => {
                   <div className="relative">
                     <ModernTimeSelect
                       value={formData.time}
+                      aria-label="Event time"
                       onValueChange={(value) => setFormData((previousData) => ({ ...previousData, time: value }))}
                       placeholder="Select time"
                       required

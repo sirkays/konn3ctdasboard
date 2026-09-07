@@ -3,7 +3,8 @@ import {
   AlertTriangle,
   Copy,
   KeyRound,
-  Laptop,
+  Clock3,
+  Search,
   LoaderCircle,
   Plus,
   RefreshCcw,
@@ -28,7 +29,7 @@ import {
 } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
+
 import { Skeleton } from "../components/ui/skeleton";
 import { useToast } from "../hooks/use-toast";
 
@@ -172,6 +173,7 @@ export default function ApiTokens() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tokenName, setTokenName] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [pendingDeleteToken, setPendingDeleteToken] = useState(null);
   const [revealedToken, setRevealedToken] = useState("");
 
@@ -230,6 +232,9 @@ export default function ApiTokens() {
     },
   });
 
+  const filteredTokens = tokens.filter((token) =>
+    [token.label, token.userAgent, token.ipAddress].filter(Boolean).join(" ").toLowerCase().includes(searchTerm.trim().toLowerCase())
+  );
   const isCreating = createTokenMutation.isPending;
   const isDeleting = deleteTokenMutation.isPending;
   const trimmedTokenName = tokenName.trim();
@@ -255,212 +260,109 @@ export default function ApiTokens() {
   };
 
   return (
-    <section className="flex flex-col gap-8 pb-10 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-          {t("apiTokens.title")}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {t("apiTokens.subtitle")}
-        </p>
+    <section className="flex flex-col gap-8 px-4 pb-10 sm:px-6 lg:px-[33px] animate-in fade-in duration-500">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{t("apiTokens.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("apiTokens.subtitle")}</p>
+        </div>
+        <Button variant="outline" className="h-11 rounded-xl" disabled={tokenQuery.isFetching} onClick={() => tokenQuery.refetch()}>
+          <RefreshCcw className={tokenQuery.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          {t("apiTokens.refresh", "Refresh tokens")}
+        </Button>
       </div>
-
-      <div className="space-y-6">
-        <Card className="overflow-hidden rounded-2xl border-border/60 bg-surface shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <CardHeader className="space-y-2 border-b border-border/60 p-5 sm:p-6 lg:p-8">
-            <CardTitle className="text-2xl font-bold">
-              {t("apiTokens.title")}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {t("apiTokens.overview")}
-            </p>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {[
+          { label: t("apiTokens.totalTokens", "Total tokens"), value: tokens.length, icon: KeyRound, color: "bg-brand-blue/10 text-brand-blue" },
+          { label: t("apiTokens.previouslyUsed", "Previously used"), value: tokens.filter((token) => token.lastUsedAt).length, icon: Clock3, color: "bg-brand-green/10 text-brand-green" },
+          { label: t("apiTokens.neverUsed"), value: tokens.filter((token) => !token.lastUsedAt).length, icon: ShieldAlert, color: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+        ].map((stat) => (
+          <div key={stat.label} className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface p-4 shadow-sm">
+            <div className={"flex h-10 w-10 shrink-0 items-center justify-center rounded-lg " + stat.color}><stat.icon className="h-5 w-5" /></div>
+            <div>
+              {tokenQuery.isLoading ? <Skeleton className="mb-1 h-8 w-12" /> : <p className="text-2xl font-bold text-foreground">{tokenQuery.isError ? "?" : stat.value}</p>}
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-6">
+        <div className="space-y-4">
+          <Card className="overflow-hidden rounded-2xl border-border/60 bg-surface shadow-sm">
+            <CardHeader className="border-b border-border/60 p-5 sm:p-6">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green"><Plus className="h-5 w-5" /></div>
+              <CardTitle className="text-lg font-bold">{t("apiTokens.createTitle")}</CardTitle>
+              <p className="text-sm leading-6 text-muted-foreground">{t("apiTokens.createDescription")}</p>
+            </CardHeader>
+            <CardContent className="p-5 sm:p-6">
+              <form className="space-y-4" onSubmit={handleCreateToken}>
+                <div className="space-y-2">
+                  <Label htmlFor="api-token-name">{t("apiTokens.tokenName")}</Label>
+                  <Input id="api-token-name" value={tokenName} onChange={(event) => setTokenName(event.target.value)} placeholder={t("apiTokens.tokenNamePlaceholder")} autoComplete="off" required disabled={isCreating} aria-describedby="token-private-hint" className="h-11 rounded-xl border-border/60 bg-muted/30 focus-visible:border-brand-green/50 focus-visible:ring-brand-green/30" />
+                  <p id="token-private-hint" className="text-xs leading-5 text-muted-foreground">{t("apiTokens.privateWarning")}</p>
+                </div>
+                <Button type="submit" disabled={!trimmedTokenName || isCreating} className="h-11 w-full rounded-xl bg-brand-green text-white hover:bg-brand-green/90">
+                  {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  {isCreating ? t("apiTokens.creating") : t("apiTokens.createButton")}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+          <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs leading-6 text-muted-foreground">{t("apiTokens.securityNote")}</p>
+          </div>
+        </div>
+        <Card className="min-w-0 overflow-hidden rounded-2xl border-border/60 bg-surface shadow-sm">
+          <CardHeader className="space-y-4 border-b border-border/60 p-5 sm:p-6">
+            <div>
+              <CardTitle className="text-lg font-bold">{t("apiTokens.manageTitle")}</CardTitle>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("apiTokens.manageDescription")}</p>
+            </div>
+            <div className="relative">
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input type="search" aria-label={t("apiTokens.search", "Search tokens...")} placeholder={t("apiTokens.search", "Search tokens...")} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} className="h-11 rounded-xl border-border/60 bg-muted/30 pl-9 focus-visible:border-brand-green/50 focus-visible:ring-brand-green/30" />
+            </div>
           </CardHeader>
-          <CardContent className="p-5 sm:p-6 lg:p-8">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:items-start">
-              <div className="space-y-3">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-green/10 text-brand-green">
-                  <KeyRound className="h-5 w-5" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-semibold">
-                    {t("apiTokens.createTitle")}
-                  </h2>
-                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                    {t("apiTokens.createDescription")}
-                  </p>
-                </div>
-                <div className="flex items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-muted-foreground">
-                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <p>{t("apiTokens.securityNote")}</p>
-                </div>
+          <CardContent className="p-5 sm:p-6" aria-busy={tokenQuery.isFetching}>
+            {tokenQuery.isLoading ? (
+              <div className="space-y-3"><TokenRowSkeleton /><TokenRowSkeleton /><TokenRowSkeleton /></div>
+            ) : tokenQuery.isError ? (
+              <div role="alert" className="flex flex-col items-center gap-3 rounded-xl bg-destructive/5 px-5 py-12 text-center">
+                <AlertTriangle className="h-8 w-8 text-destructive" />
+                <p className="font-semibold">{t("apiTokens.loadError")}</p>
+                <p className="max-w-sm text-sm text-muted-foreground">{extractApiError(tokenQuery.error, t("apiTokens.retryHint"), t("apiTokens.notFound"))}</p>
+                <Button variant="outline" className="mt-2 rounded-xl" disabled={tokenQuery.isFetching} onClick={() => tokenQuery.refetch()}><RefreshCcw className="h-4 w-4" />{t("common.actions.retry")}</Button>
               </div>
-
-              <Card className="rounded-2xl border-border/60 bg-background shadow-sm">
-                <CardContent className="p-5 sm:p-6">
-                  <form className="space-y-4" onSubmit={handleCreateToken}>
-                    <div className="space-y-2">
-                      <Label htmlFor="api-token-name">
-                        {t("apiTokens.tokenName")}
-                      </Label>
-                      <Input
-                        id="api-token-name"
-                        value={tokenName}
-                        onChange={(event) => setTokenName(event.target.value)}
-                        placeholder={t("apiTokens.tokenNamePlaceholder")}
-                        autoComplete="off"
-                      />
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        {t("apiTokens.privateWarning")}
-                      </p>
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={!trimmedTokenName || isCreating}
-                      className="w-full rounded-xl bg-brand-green text-white hover:bg-[#287854] sm:w-auto"
-                    >
-                      {isCreating ? (
-                        <>
-                          <LoaderCircle className="animate-spin" />
-                          {t("apiTokens.creating")}
-                        </>
-                      ) : (
-                        <>
-                          <Plus />
-                          {t("apiTokens.createButton")}
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Separator className="my-8" />
-
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:items-start">
-              <div className="space-y-3">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue">
-                  <Laptop className="h-5 w-5" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-semibold">
-                    {t("apiTokens.manageTitle")}
-                  </h2>
-                  <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                    {t("apiTokens.manageDescription")}
-                  </p>
-                </div>
+            ) : filteredTokens.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-14 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-blue/10 text-brand-blue"><KeyRound className="h-6 w-6" /></div>
+                <p className="mt-2 font-semibold">{tokens.length ? t("apiTokens.noMatches", "No matching tokens") : t("apiTokens.empty")}</p>
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">{tokens.length ? t("apiTokens.searchHint", "Try a different name, device, or IP address.") : t("apiTokens.overview")}</p>
+                {tokens.length > 0 && <Button variant="outline" className="rounded-xl" onClick={() => setSearchTerm("")}>{t("apiTokens.clearSearch", "Clear search")}</Button>}
               </div>
-
-              <Card className="rounded-2xl border-border/60 bg-background shadow-sm">
-                <CardContent className="p-5 sm:p-6">
-                  {tokenQuery.isLoading ? (
-                    <div className="space-y-3">
-                      <TokenRowSkeleton />
-                      <TokenRowSkeleton />
-                      <TokenRowSkeleton />
-                    </div>
-                  ) : tokenQuery.isError ? (
-                    <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-5">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                        <div className="space-y-3">
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {tokenQuery.error?.response?.status === 404
-                                ? t("apiTokens.notFound")
-                                : t("apiTokens.loadError")}
-                            </p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {extractApiError(
-                                tokenQuery.error,
-                                t("apiTokens.retryHint"),
-                                t("apiTokens.notFound")
-                              )}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            onClick={() => tokenQuery.refetch()}
-                          >
-                            <RefreshCcw />
-                            {t("common.actions.retry")}
-                          </Button>
-                        </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredTokens.map((token) => (
+                  <article key={token.id} className="rounded-xl border border-border/60 p-4 transition-colors hover:bg-muted/20 sm:p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-blue/10 text-brand-blue"><KeyRound className="h-5 w-5" /></div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words font-semibold text-foreground">{token.label}</h3>
+                        {token.userAgent && <p className="mt-1 break-words text-xs text-muted-foreground">{token.userAgent}</p>}
                       </div>
+                      <Button variant="ghost" size="icon" aria-label={t("apiTokens.delete") + " " + token.label} disabled={isDeleting} onClick={() => setPendingDeleteToken(token)} className="shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                     </div>
-                  ) : tokens.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-border/80 bg-muted/30 p-6 text-sm leading-6 text-muted-foreground">
-                      {t("apiTokens.empty")}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {tokens.map((token) => (
-                        <div
-                          key={token.id}
-                          className="rounded-2xl border border-border/70 bg-background/80 p-4 transition-colors"
-                        >
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="min-w-0 space-y-3">
-                              <div>
-                                <p className="font-semibold text-foreground">
-                                  {token.label}
-                                </p>
-                                {token.userAgent ? (
-                                  <p className="mt-1 break-words text-sm text-muted-foreground">
-                                    {token.userAgent}
-                                  </p>
-                                ) : null}
-                              </div>
-                              <div className="space-y-1 text-sm text-muted-foreground">
-                                <p>
-                                  {t("apiTokens.lastUsedLabel")}:{" "}
-                                  <span className="text-foreground/90">
-                                    {token.lastUsedAt || t("apiTokens.neverUsed")}
-                                  </span>
-                                </p>
-                                <p>
-                                  {t("apiTokens.createdLabel")}:{" "}
-                                  <span className="text-foreground/90">
-                                    {token.createdAt || t("apiTokens.notAvailable")}
-                                  </span>
-                                </p>
-                                {token.ipAddress ? (
-                                  <p>
-                                    {t("apiTokens.ipAddressLabel")}:{" "}
-                                    <span className="text-foreground/90">
-                                      {token.ipAddress}
-                                    </span>
-                                  </p>
-                                ) : null}
-                                {token.maskedValue ? (
-                                  <p className="break-all">
-                                    {t("apiTokens.tokenPreviewLabel")}:{" "}
-                                    <span className="font-mono text-foreground/90">
-                                      {token.maskedValue}
-                                    </span>
-                                  </p>
-                                ) : null}
-                              </div>
-                            </div>
-
-                            <Button
-                              variant="destructive"
-                              disabled={isDeleting}
-                              onClick={() => setPendingDeleteToken(token)}
-                              className="w-full sm:w-auto"
-                            >
-                              <Trash2 />
-                              {t("apiTokens.delete")}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                    {token.maskedValue && <div className="mt-4 rounded-lg bg-muted/40 px-3 py-2"><span className="sr-only">{t("apiTokens.tokenPreviewLabel")}</span><code className="break-all text-xs text-muted-foreground">{token.maskedValue}</code></div>}
+                    <dl className="mt-4 grid gap-3 border-t border-border/50 pt-4 text-xs sm:grid-cols-2">
+                      <div><dt className="text-muted-foreground">{t("apiTokens.createdLabel")}</dt><dd className="mt-1 font-medium">{token.createdAt || t("apiTokens.notAvailable")}</dd></div>
+                      <div><dt className="text-muted-foreground">{t("apiTokens.lastUsedLabel")}</dt><dd className="mt-1 font-medium">{token.lastUsedAt || t("apiTokens.neverUsed")}</dd></div>
+                      {token.ipAddress && <div><dt className="text-muted-foreground">{t("apiTokens.ipAddressLabel")}</dt><dd className="mt-1 break-all font-mono">{token.ipAddress}</dd></div>}
+                    </dl>
+                  </article>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -471,7 +373,7 @@ export default function ApiTokens() {
           if (!open) setRevealedToken("");
         }}
       >
-        <DialogContent className="w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] md:max-w-xl">
+        <DialogContent className="w-[calc(100%-2rem)] rounded-2xl border-border/60 bg-surface sm:max-w-lg">
           <DialogTitle>{t("apiTokens.secretDialogTitle")}</DialogTitle>
           <DialogDescription>
             {t("apiTokens.secretDialogDescription")}
@@ -502,7 +404,7 @@ export default function ApiTokens() {
           if (!open) setPendingDeleteToken(null);
         }}
       >
-        <DialogContent className="w-[calc(100%-2rem)] md:w-[calc(100%-4rem)] md:max-w-xl">
+        <DialogContent className="w-[calc(100%-2rem)] rounded-2xl border-border/60 bg-surface sm:max-w-lg">
           <DialogTitle>{t("apiTokens.deleteDialogTitle")}</DialogTitle>
           <DialogDescription>
             {t("apiTokens.deleteDialogDescription", {
