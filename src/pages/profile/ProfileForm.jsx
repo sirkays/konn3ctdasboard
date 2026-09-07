@@ -224,7 +224,7 @@ export function ProfileForm() {
           <div className="flex justify-end pt-2 border-t border-border/40">
             <Button
               type="submit"
-              className="h-10 rounded-xl px-6 bg-brand-green hover:bg-[#287854] text-white"
+              className="main-action-button h-10 rounded-xl px-6"
               disabled={profileMutation.isPending}
             >
               {profileMutation.isPending

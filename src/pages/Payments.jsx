@@ -279,7 +279,7 @@ const Payments = () => {
               <p className="text-sm text-muted-foreground mt-0.5">{profileUser.email}</p>
             </div>
           </div>
-          <Button variant="outline" className="h-11 rounded-xl px-4 border-brand-green/30 text-brand-green hover:bg-brand-green hover:text-white transition-all">
+          <Button className="main-action-button h-11 rounded-xl px-4">
             {t("payments.actions.manageSubscription", "Manage Subscription")}
           </Button>
         </CardContent>
@@ -443,15 +443,13 @@ const PlanCard = ({ plan, currentPlanName, paystackBaseProps }) => {
           ) : fullPaystackProps ? (
             <div className="w-full">
               <PaystackButton
-                className={`w-full h-11 rounded-xl font-semibold transition-all inline-flex items-center justify-center text-sm ${
-                  popular ? "bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)]" : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                }`}
+                className="main-action-button w-full h-11 rounded-xl font-semibold inline-flex items-center justify-center text-sm"
                 {...fullPaystackProps}
               />
             </div>
           ) : (
             <Button
-              className="w-full h-11 rounded-xl font-semibold bg-brand-blue hover:bg-[#0047E1] text-white"
+              className="main-action-button w-full h-11 rounded-xl font-semibold"
               onClick={() => contactSalesUrl && window.open(contactSalesUrl, "_blank", "noopener,noreferrer")}
             >
               {plan.cta}

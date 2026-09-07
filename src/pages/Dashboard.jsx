@@ -117,7 +117,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-3 w-full md:w-auto">
           <Link to="/payments" className="w-full md:w-auto">
             <Button
-              className="w-full h-12 rounded-xl px-6 bg-brand-green hover:bg-[#287854] text-white shadow-[0_8px_24px_rgba(32,116,80,0.25)] hover:shadow-[0_12px_32px_rgba(32,116,80,0.35)] transition-all"
+              className="main-action-button w-full h-12 rounded-xl px-6"
             >
               <CreditCard className="w-5 h-5 mr-2" />
               {t("common.actions.managePlan", "Manage Plan")}
@@ -197,7 +197,7 @@ const Dashboard = () => {
                         ID
                       </Button>
                       <Link to="/join">
-                        <Button size="sm" className="rounded-lg h-9 bg-brand-green hover:bg-[#287854] text-white">
+                        <Button size="sm" className="main-action-button rounded-lg h-9">
                           Join
                         </Button>
                       </Link>
@@ -231,7 +231,7 @@ const Dashboard = () => {
                   </Button>
                   <Button
                     onClick={() => navigate("/rooms")}
-                    className="w-full bg-brand-green text-white hover:bg-[#287854] h-12 rounded-xl font-bold transition-transform active:scale-95 px-2"
+                    className="main-action-button w-full h-12 rounded-xl font-bold px-2"
                   >
                     <img src={video} alt="Host" className="w-4 h-4 mr-2" style={{ filter: "brightness(0) invert(1)" }} />
                     Host

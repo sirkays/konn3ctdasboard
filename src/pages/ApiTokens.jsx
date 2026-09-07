@@ -301,7 +301,7 @@ export default function ApiTokens() {
                   <Input id="api-token-name" value={tokenName} onChange={(event) => setTokenName(event.target.value)} placeholder={t("apiTokens.tokenNamePlaceholder")} autoComplete="off" required disabled={isCreating} aria-describedby="token-private-hint" className="h-11 rounded-xl border-border/60 bg-muted/30 focus-visible:border-brand-green/50 focus-visible:ring-brand-green/30" />
                   <p id="token-private-hint" className="text-xs leading-5 text-muted-foreground">{t("apiTokens.privateWarning")}</p>
                 </div>
-                <Button type="submit" disabled={!trimmedTokenName || isCreating} className="h-11 w-full rounded-xl bg-brand-green text-white hover:bg-brand-green/90">
+                <Button type="submit" disabled={!trimmedTokenName || isCreating} className="main-action-button h-11 w-full rounded-xl">
                   {isCreating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   {isCreating ? t("apiTokens.creating") : t("apiTokens.createButton")}
                 </Button>
@@ -390,7 +390,7 @@ export default function ApiTokens() {
             <Button variant="outline" onClick={() => setRevealedToken("")}>
               {t("common.actions.cancel")}
             </Button>
-            <Button onClick={handleCopyRevealedToken}>
+            <Button className="main-action-button" onClick={handleCopyRevealedToken}>
               <Copy />
               {t("apiTokens.copy")}
             </Button>

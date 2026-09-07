@@ -146,6 +146,28 @@
   }
 }
 
+@layer components {
+  .main-action-button {
+    color: #ffffff;
+    background-image: linear-gradient(to right, var(--color-brand-blue), var(--color-brand-green));
+    box-shadow: 0 10px 24px rgba(0, 44, 136, 0.18);
+    transition:
+      transform 150ms ease,
+      box-shadow 150ms ease,
+      filter 150ms ease;
+  }
+
+  .main-action-button:hover {
+    color: #ffffff;
+    filter: brightness(1.06);
+    box-shadow: 0 14px 30px rgba(32, 116, 80, 0.24);
+  }
+
+  .main-action-button:active {
+    transform: scale(0.98);
+  }
+}
+
 body {
   font-family: "Geist", "Inter", sans-serif;
   overflow-x: hidden;

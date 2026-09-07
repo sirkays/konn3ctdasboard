@@ -555,7 +555,7 @@ const CreateEvents = () => {
               <Button 
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] font-semibold transition-all"
+                className="main-action-button w-full sm:w-auto h-12 px-8 rounded-xl font-semibold"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">

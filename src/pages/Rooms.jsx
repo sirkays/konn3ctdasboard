@@ -225,8 +225,7 @@ const Rooms = () => {
         </div>
         <div className="flex gap-3 w-full sm:w-auto">
           <Button 
-            variant="outline"
-            className="h-11 rounded-xl px-5 border-border/60 bg-surface flex-1 sm:flex-none hover:bg-black/[0.02]"
+            className="main-action-button h-11 rounded-xl px-5 flex-1 sm:flex-none"
             onClick={() => navigate("/dashboard/schedule/new")}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -234,7 +233,7 @@ const Rooms = () => {
           </Button>
           {roomsData.can_create_room !== false && (
             <Button 
-              className="h-11 rounded-xl px-5 bg-brand-green hover:bg-[#287854] text-white shadow-lg shadow-brand-green/20 transition-all flex-1 sm:flex-none"
+              className="main-action-button h-11 rounded-xl px-5 flex-1 sm:flex-none"
               onClick={() => navigate("/dashboard/rooms/new")}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -537,7 +536,7 @@ const AccessCodeDialog = ({ open, setOpen, roomId, currentAccessCode, mutation }
                     {t("rooms.accessDialog.remove", "Remove")}
                   </Button>
                 )}
-                <Button type="submit" className="rounded-xl h-10 px-6">{t("common.actions.save")}</Button>
+                <Button type="submit" className="main-action-button rounded-xl h-10 px-6">{t("common.actions.save")}</Button>
               </div>
             </div>
           </form>
@@ -565,7 +564,7 @@ const LimitUserDialog = ({ open, setOpen, roomId, mutation }) => {
                 <FormMessage />
               </FormItem>
             )} />
-            <Button type="submit" className="self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.save")}</Button>
+            <Button type="submit" className="main-action-button self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.save")}</Button>
           </form>
         </Form>
       </DialogContent>
@@ -593,7 +592,7 @@ const BannerUploadDialog = ({ open, setOpen, roomId, mutation }) => {
                 <FormMessage />
               </FormItem>
             )} />
-            <Button type="submit" className="self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.upload")}</Button>
+            <Button type="submit" className="main-action-button self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.upload")}</Button>
           </form>
         </Form>
       </DialogContent>
@@ -619,7 +618,7 @@ const TransferRoomDialog = ({ open, setOpen, roomId, mutation }) => {
                 <FormMessage />
               </FormItem>
             )} />
-            <Button type="submit" className="self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.transfer")}</Button>
+            <Button type="submit" className="main-action-button self-end rounded-xl h-10 px-6 mt-2">{t("common.actions.transfer")}</Button>
           </form>
         </Form>
       </DialogContent>

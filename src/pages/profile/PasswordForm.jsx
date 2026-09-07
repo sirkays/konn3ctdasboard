@@ -174,7 +174,7 @@ export function PasswordForm({ onCancel }) {
           <Button
             type="submit"
             size="sm"
-            className="rounded-lg h-9 bg-brand-green hover:bg-[#287854] text-white"
+            className="main-action-button rounded-lg h-9"
             disabled={passwordMutation.isPending}
           >
             {passwordMutation.isPending ? t("profile.form.updating", "Updating...") : t("profile.passwordForm.submit", "Update Password")}

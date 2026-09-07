@@ -58,7 +58,7 @@ const UpgradeTeam = ({ onUpgrade }) => {
 
       <Button
         type="button"
-        className="h-11 w-full rounded-xl bg-orange-500 text-sm font-extrabold text-white shadow-lg shadow-orange-500/20 hover:bg-orange-600"
+        className="main-action-button h-11 w-full rounded-xl text-sm font-extrabold"
         onClick={onUpgrade}
       >
         Upgrade via Paystack
