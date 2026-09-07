@@ -122,6 +122,17 @@ const getParticipantName = (participant) => {
 };
 
 const getPaymentStatus = (participant, event) => {
+  if (isFreeEvent(event)) return "Paid";
+
+  const isPaid =
+    participant?.paid === 1 ||
+    participant?.paid === "1" ||
+    participant?.paid === true ||
+    Boolean(participant?.paid_at) ||
+    Boolean(participant?.payment?.paid_at);
+
+  if (isPaid) return "Paid";
+
   const status = String(
     getFirstValue(participant, [
       "payment_status",
@@ -129,12 +140,20 @@ const getPaymentStatus = (participant, event) => {
       "status",
       "transaction_status",
     ])
-  );
+  ).trim();
 
-  if (status) return status;
-  if (isFreeEvent(event)) return "Paid";
+  if (status) {
+    const normalized = status.toLowerCase();
+    if (normalized.includes("paid") || normalized.includes("success")) {
+      return "Paid";
+    }
+    if (normalized.includes("pend")) {
+      return "Pending";
+    }
+    return status;
+  }
 
-  return participant?.paid_at || participant?.payment?.paid_at ? "Paid" : "Pending";
+  return "Pending";
 };
 
 const getStatusClassName = (status) => {
@@ -230,13 +249,20 @@ const EventDetail = () => {
   const currency = getEventCurrency(event ?? {});
   const ticketPrice = getEventPrice(event ?? {});
   const registrations = getRegistrationCount(event ?? {}, participants);
-  const totalRevenue = free
-    ? 0
-    : toNumber(getFirstValue(event, ["revenue", "total_revenue", "totalRevenue", "amount_paid"])) ||
-      ticketPrice * registrations;
   const paidRegistrations = attendeeRows.filter((row) =>
     String(row.status).toLowerCase().includes("paid")
   ).length;
+  const explicitRevenue = getFirstValue(event, [
+    "revenue",
+    "total_revenue",
+    "totalRevenue",
+    "amount_paid",
+  ]);
+  const totalRevenue = free
+    ? 0
+    : explicitRevenue !== "" && explicitRevenue !== null && explicitRevenue !== undefined
+      ? toNumber(explicitRevenue)
+      : ticketPrice * paidRegistrations;
   const explicitConversion = getFirstValue(event, [
     "page_conversion",
     "pageConversion",
