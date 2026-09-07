@@ -5,7 +5,10 @@ import {
   Calendar,
   CheckCircle2,
   Clock3,
+  Copy,
+  CreditCard,
   DollarSign,
+  Eye,
   Mail,
   MoreVertical,
   Share2,
@@ -20,6 +23,19 @@ import {
 import { useToast } from "../../hooks/use-toast";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 
 const CURRENCY_SYMBOLS = {
   NGN: "\u20a6",
@@ -182,6 +198,8 @@ const EventDetail = () => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reminderLoading, setReminderLoading] = useState(false);
+  const [selectedAttendee, setSelectedAttendee] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -238,8 +256,14 @@ const EventDetail = () => {
           id: getFirstValue(participant, ["id", "reference", "email"], index),
           name: getParticipantName(participant),
           email: getFirstValue(participant, ["email"], "-"),
+          phone: getFirstValue(participant, ["phone", "phonenumber", "telephone"], "-"),
           date: formatDate(getFirstValue(participant, ["created_at", "registered_at", "date"])),
           status,
+          paid: participant?.paid,
+          amount: getFirstValue(participant, ["amount"]),
+          paymentReference: getFirstValue(participant, ["payment_reference", "reference"]),
+          paymentProvider: getFirstValue(participant, ["payment_provider", "provider"], "Paystack"),
+          raw: participant,
         };
       }),
     [event, participants]
@@ -467,13 +491,68 @@ const EventDetail = () => {
                           <span>{statusClassName.label}</span>
                         </div>
                         <div className="flex justify-end">
-                          <button
-                            type="button"
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                            aria-label={`Actions for ${attendee.name}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none"
+                                aria-label={`Actions for ${attendee.name}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="end"
+                              className="w-52 rounded-xl border-border/60 bg-surface p-1.5 shadow-xl"
+                            >
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedAttendee(attendee);
+                                  setDetailsOpen(true);
+                                }}
+                                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                              >
+                                <Eye className="h-4 w-4 text-muted-foreground" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  navigator.clipboard.writeText(attendee.email);
+                                  toast({ description: "Email copied to clipboard." });
+                                }}
+                                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                              >
+                                <Copy className="h-4 w-4 text-muted-foreground" />
+                                Copy Email
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  window.location.href = `mailto:${attendee.email}?subject=${encodeURIComponent(
+                                    getEventTitle(event)
+                                  )}`;
+                                }}
+                                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                              >
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                Send Email
+                              </DropdownMenuItem>
+                              {attendee.paymentReference && (
+                                <>
+                                  <DropdownMenuSeparator className="my-1 bg-border/40" />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(attendee.paymentReference);
+                                      toast({ description: "Payment reference copied to clipboard." });
+                                    }}
+                                    className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                                  >
+                                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                    Copy Reference
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     );
@@ -484,6 +563,94 @@ const EventDetail = () => {
           </div>
         </Card>
       </section>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-border/60 bg-surface p-6 shadow-2xl">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-xl font-extrabold text-foreground">
+              Attendee Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedAttendee && (
+            <div className="mt-4 space-y-3.5 text-sm">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Attendee Name</span>
+                <span className="font-bold text-foreground">{selectedAttendee.name}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Email Address</span>
+                <span className="font-semibold text-foreground">{selectedAttendee.email}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Phone Number</span>
+                <span className="font-medium text-foreground">
+                  {selectedAttendee.phone && selectedAttendee.phone !== "-"
+                    ? selectedAttendee.phone
+                    : "Not provided"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Registration Date</span>
+                <span className="font-medium text-foreground">{selectedAttendee.date}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Payment Status</span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      getStatusClassName(selectedAttendee.status).dot
+                    }`}
+                  />
+                  <span
+                    className={`font-bold ${
+                      getStatusClassName(selectedAttendee.status).text
+                    }`}
+                  >
+                    {getStatusClassName(selectedAttendee.status).label}
+                  </span>
+                </div>
+              </div>
+              {!free && (
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <span className="font-medium text-muted-foreground">Ticket Amount</span>
+                  <span className="font-bold text-foreground">
+                    {formatMoney(
+                      selectedAttendee.amount || ticketPrice,
+                      currency
+                    )}
+                  </span>
+                </div>
+              )}
+              {selectedAttendee.paymentReference && (
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <span className="font-medium text-muted-foreground">Payment Reference</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {selectedAttendee.paymentReference}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedAttendee.paymentReference);
+                        toast({ description: "Payment reference copied to clipboard." });
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Copy reference"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1">
+                <span className="font-medium text-muted-foreground">Event</span>
+                <span className="font-bold text-foreground">{getEventTitle(event)}</span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

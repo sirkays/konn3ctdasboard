@@ -13,7 +13,7 @@ import {
 } from "../../components/ui/form";
 import { Input } from "../../components/ui/input";
 import useAuth from "../../hooks/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import SideDetail from "./SideDetail";
 import { Card } from "../../components/ui/card";
 import logo from "../../assets/konn3ct_logo.png";
@@ -79,13 +79,23 @@ export function LoginForm() {
       .min(6, { message: t("auth.login.validation.passwordMin") }),
   });
 
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const prefilledEmail = location?.state?.email || searchParams.get("email") || "";
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      username: prefilledEmail,
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (prefilledEmail && !form.getValues("username")) {
+      form.setValue("username", prefilledEmail);
+    }
+  }, [prefilledEmail, form]);
 
   const { toast } = useToast();
   const navigate = useNavigate();

@@ -2,8 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar,
+  Copy,
   CreditCard,
   DollarSign,
+  ExternalLink,
+  Eye,
   Globe2,
   Mail,
   MoreVertical,
@@ -21,6 +24,19 @@ import {
 import { useToast } from "../../hooks/use-toast";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import {
   Pagination,
   PaginationContent,
@@ -178,9 +194,14 @@ const normalizeRecentRegistration = (registration, index = 0) => {
     id: getFirstValue(registration, ["id", "reference", "email"], index),
     name: getParticipantName(registration),
     email: getFirstValue(registration, ["email"], "-"),
+    phone: getFirstValue(registration, ["phone", "phonenumber", "telephone"], "-"),
     eventTitle: getRegistrationEventTitle(registration),
+    eventReference: getEventReference(event),
     status: getPaymentStatus(registration, event),
-    createdAt: getFirstValue(registration, ["created_at", "registered_at", "date"]),
+    createdAt: formatDate(getFirstValue(registration, ["created_at", "registered_at", "date"])),
+    amount: getFirstValue(registration, ["amount"]),
+    paymentReference: getFirstValue(registration, ["payment_reference", "reference"]),
+    raw: registration,
   };
 };
 
@@ -246,6 +267,8 @@ const EventDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [reminderLoading, setReminderLoading] = useState(false);
   const [eventsPage, setEventsPage] = useState(1);
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -282,9 +305,14 @@ const EventDashboard = () => {
                     )}`,
                     name: getParticipantName(participant),
                     email: getFirstValue(participant, ["email"], "-"),
+                    phone: getFirstValue(participant, ["phone", "phonenumber", "telephone"], "-"),
                     eventTitle: getEventTitle(event),
+                    eventReference: getEventReference(event),
                     status: getPaymentStatus(participant, event),
-                    createdAt: getFirstValue(participant, ["created_at", "registered_at", "date"]),
+                    createdAt: formatDate(getFirstValue(participant, ["created_at", "registered_at", "date"])),
+                    amount: getFirstValue(participant, ["amount"]),
+                    paymentReference: getFirstValue(participant, ["payment_reference", "reference"]),
+                    raw: participant,
                   }));
                 } catch (error) {
                   console.error("Failed to load event participants:", error);
@@ -634,13 +662,79 @@ const EventDashboard = () => {
                         <span>{registration.status}</span>
                       </div>
                       <div className="flex justify-end">
-                        <button
-                          type="button"
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                          aria-label={`Actions for ${registration.name}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus:outline-none"
+                              aria-label={`Actions for ${registration.name}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-52 rounded-xl border-border/60 bg-surface p-1.5 shadow-xl"
+                          >
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedRegistration(registration);
+                                setDetailsOpen(true);
+                              }}
+                              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                            >
+                              <Eye className="h-4 w-4 text-muted-foreground" />
+                              View Details
+                            </DropdownMenuItem>
+                            {registration.eventReference && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  navigate(`/events/detail/${registration.eventReference}`);
+                                }}
+                                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                              >
+                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                View Event
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                navigator.clipboard.writeText(registration.email);
+                                toast({ description: "Email copied to clipboard." });
+                              }}
+                              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                            >
+                              <Copy className="h-4 w-4 text-muted-foreground" />
+                              Copy Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                window.location.href = `mailto:${registration.email}?subject=${encodeURIComponent(
+                                  registration.eventTitle || "Event Registration"
+                                )}`;
+                              }}
+                              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                            >
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              Send Email
+                            </DropdownMenuItem>
+                            {registration.paymentReference && (
+                              <>
+                                <DropdownMenuSeparator className="my-1 bg-border/40" />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(registration.paymentReference);
+                                    toast({ description: "Payment reference copied to clipboard." });
+                                  }}
+                                  className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/40"
+                                >
+                                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                  Copy Reference
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   );
@@ -650,6 +744,105 @@ const EventDashboard = () => {
           </div>
         </Card>
       </section>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-md rounded-2xl border-border/60 bg-surface p-6 shadow-2xl">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-xl font-extrabold text-foreground">
+              Registration Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedRegistration && (
+            <div className="mt-4 space-y-3.5 text-sm">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Attendee Name</span>
+                <span className="font-bold text-foreground">{selectedRegistration.name}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Email Address</span>
+                <span className="font-semibold text-foreground">{selectedRegistration.email}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Phone Number</span>
+                <span className="font-medium text-foreground">
+                  {selectedRegistration.phone && selectedRegistration.phone !== "-"
+                    ? selectedRegistration.phone
+                    : "Not provided"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Event</span>
+                <span className="font-bold text-foreground">{selectedRegistration.eventTitle}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Registration Date</span>
+                <span className="font-medium text-foreground">{selectedRegistration.createdAt}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <span className="font-medium text-muted-foreground">Payment Status</span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      getStatusClassName(selectedRegistration.status).dot
+                    }`}
+                  />
+                  <span
+                    className={`font-bold ${
+                      getStatusClassName(selectedRegistration.status).text
+                    }`}
+                  >
+                    {selectedRegistration.status}
+                  </span>
+                </div>
+              </div>
+              {selectedRegistration.amount && Number(selectedRegistration.amount) > 0 && (
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <span className="font-medium text-muted-foreground">Amount Paid</span>
+                  <span className="font-bold text-foreground">
+                    {formatMoney(selectedRegistration.amount)}
+                  </span>
+                </div>
+              )}
+              {selectedRegistration.paymentReference && (
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <span className="font-medium text-muted-foreground">Payment Reference</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-semibold text-foreground">
+                      {selectedRegistration.paymentReference}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedRegistration.paymentReference);
+                        toast({ description: "Payment reference copied to clipboard." });
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                      title="Copy reference"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {selectedRegistration.eventReference && (
+                <div className="pt-2">
+                  <Button
+                    onClick={() => {
+                      setDetailsOpen(false);
+                      navigate(`/events/detail/${selectedRegistration.eventReference}`);
+                    }}
+                    className="w-full rounded-xl bg-brand-blue font-semibold text-white hover:bg-brand-blue/90"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Go to Event Details
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
