@@ -8,7 +8,8 @@ import {
 } from "./components/AccountSections";
 import AppearanceSection from "./components/AppearanceSection";
 import SettingsNavigation from "./components/SettingsNavigation";
-import ViewProfile from "../view-profile/ViewProfile";
+// Temporarily disabled: public profile preview.
+// import ViewProfile from "../view-profile/ViewProfile";
 
 const Settings = () => {
   const [activeSection, setActiveSection] = useState("profile");
@@ -32,7 +33,7 @@ const Settings = () => {
 
         <div>
           {activeSection === "profile" && <ProfileSection />}
-          {activeSection === "view-profile" && <ViewProfile embedded />}
+          {/* {activeSection === "view-profile" && <ViewProfile embedded />} */}
           {activeSection === "security" && <SecuritySection />}
           {activeSection === "notifications" && <NotificationsSection />}
           {activeSection === "appearance" && <AppearanceSection />}

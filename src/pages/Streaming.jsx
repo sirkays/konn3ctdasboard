@@ -4,7 +4,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
-  Cast, Radio, Clock, Calendar, Check, ChevronsUpDown, StopCircle, PlayCircle, Globe, Video
+  Cast, Radio, Clock, Calendar, StopCircle, PlayCircle, Globe, Video
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,21 +40,9 @@ import {
   FormMessage,
   Form,
 } from "../components/ui/form";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "../components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../components/ui/popover";
 import { z } from "zod";
 import { Skeleton } from "../components/ui/skeleton";
+import { ModernSelect } from "../components/ui/modern-select";
 
 const getApiErrorMessage = (error, fallback) =>
   error?.response?.data?.message ||
@@ -327,7 +315,6 @@ export default Streaming;
 
 const StreamForm = ({ setOpenDialog }) => {
   const { t } = useTranslation();
-  const [openPopover, setOpenPopover] = useState(false);
   const { toast } = useToast();
   const [rooms, setRooms] = useState([]);
   const [roomLoading, setRoomLoading] = useState(true);
@@ -435,15 +422,20 @@ const StreamForm = ({ setOpenDialog }) => {
           <FormItem>
             <label className="text-sm font-semibold text-foreground">{t("streaming.form.selectRoom")}</label>
             <FormControl>
-              <select
-                {...field} disabled={roomLoading}
-                className="w-full h-11 rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2.5 text-sm outline-none transition-colors focus:border-brand-green/50 focus:ring-1 focus:ring-brand-green/30"
-              >
-                <option value="">{roomLoading ? t("streaming.form.loadingRooms") : t("streaming.form.selectRoom")}</option>
-                {Array.isArray(rooms) && rooms.map((room) => (
-                  <option key={getRoomId(room)} value={getRoomId(room)}>{getRoomLabel(room)}</option>
-                ))}
-              </select>
+              <ModernSelect
+                value={field.value}
+                onValueChange={field.onChange}
+                disabled={roomLoading}
+                searchable
+                placeholder={roomLoading ? t("streaming.form.loadingRooms") : t("streaming.form.selectRoom")}
+                searchPlaceholder="Search room..."
+                emptyText="No room found."
+                options={
+                  Array.isArray(rooms)
+                    ? rooms.map((room) => ({ value: String(getRoomId(room)), label: getRoomLabel(room) }))
+                    : []
+                }
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -453,30 +445,14 @@ const StreamForm = ({ setOpenDialog }) => {
           <FormItem>
             <label className="text-sm font-semibold text-foreground">{t("streaming.form.type")}</label>
             <FormControl>
-              <Popover open={openPopover} onOpenChange={setOpenPopover}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={openPopover} className="w-full h-11 justify-between bg-black/[0.02] border-border/60">
-                    {field.value ? types.find((t) => t.value === field.value)?.label : t("streaming.form.selectType")}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0 max-w-[calc(100vw-2rem)] lg:!w-[300px]">
-                  <Command>
-                    <CommandInput placeholder={t("streaming.form.searchType")} />
-                    <CommandList>
-                      <CommandEmpty>{t("streaming.form.noTypeFound")}</CommandEmpty>
-                      <CommandGroup>
-                        {types.map((type) => (
-                          <CommandItem key={type.value} value={type.value} onSelect={() => { field.onChange(type.value); setOpenPopover(false); }}>
-                            <Check className={cn("mr-2 h-4 w-4", field.value === type.value ? "opacity-100 text-brand-green" : "opacity-0")} />
-                            {type.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <ModernSelect
+                value={field.value}
+                onValueChange={field.onChange}
+                options={types}
+                placeholder={t("streaming.form.selectType")}
+                searchPlaceholder={t("streaming.form.searchType")}
+                emptyText={t("streaming.form.noTypeFound")}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>

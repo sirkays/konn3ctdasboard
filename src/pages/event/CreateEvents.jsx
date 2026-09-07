@@ -23,13 +23,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
+import { ModernSelect, ModernTimeSelect } from "../../components/ui/modern-select";
+import { BrandedDatePicker, parseInputDate, formatDateForInput } from "../../components/ui/branded-date-picker";
 
 const getTimezones = () =>
   Intl.supportedValuesOf("timeZone").map((timezone) => timezone);
 const getRoomFallbackLabel = (id) => `Room ${id}`;
-const createEventSelectClassName =
-  "flex h-11 w-full rounded-xl border border-border/60 bg-background px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30 [color-scheme:light] dark:[color-scheme:dark]";
-const createEventOptionClassName = "bg-background text-foreground";
 
 const getCreateEventErrorMessage = (error, fallbackMessage) => {
   const backendMessage = String(
@@ -159,6 +158,46 @@ const CreateEvents = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (!formData.date) {
+      toast({
+        description: t("events.create.validation.dateRequired", "Please choose an event date."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.room) {
+      toast({
+        description: t("events.create.validation.roomRequired", "Please choose a room."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.time) {
+      toast({
+        description: t("events.create.validation.timeRequired", "Please choose an event time."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.timezone) {
+      toast({
+        description: t("events.create.validation.timezoneRequired", "Please choose a timezone."),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.reminder) {
+      toast({
+        description: t("events.create.validation.reminderRequired", "Please choose a reminder."),
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.logo) {
       setLogoError(t("events.create.validation.logoRequired", "Please upload an event logo."));
       return;
@@ -276,26 +315,29 @@ const CreateEvents = () => {
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                     {t("events.create.fields.selectRoom", "Select Room")}
                   </Label>
-                  <select
+                  <ModernSelect
                     name="room"
                     value={formData.room}
-                    onChange={handleChange}
+                    onValueChange={(value) => setFormData((previousData) => ({ ...previousData, room: value }))}
                     disabled={roomLoading}
-                    className={`${createEventSelectClassName} disabled:cursor-not-allowed disabled:opacity-50`}
                     required
-                  >
-                    <option className={createEventOptionClassName} value="">
-                      {roomLoading
+                    searchable
+                    placeholder={
+                      roomLoading
                         ? t("events.create.states.loadingRooms", "Loading rooms...")
-                        : t("events.create.fields.selectRoom", "Choose a room")}
-                    </option>
-                    {Array.isArray(rooms) &&
-                      rooms.map((room) => (
-                        <option className={createEventOptionClassName} key={room.id} value={room.id}>
-                          {room.room_name || room.name || room.label || getRoomFallbackLabel(room.id)}
-                        </option>
-                      ))}
-                  </select>
+                        : t("events.create.fields.selectRoom", "Choose a room")
+                    }
+                    searchPlaceholder="Search room..."
+                    emptyText="No room found."
+                    options={
+                      Array.isArray(rooms)
+                        ? rooms.map((room) => ({
+                            value: String(room.id),
+                            label: room.room_name || room.name || room.label || getRoomFallbackLabel(room.id),
+                          }))
+                        : []
+                    }
+                  />
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
@@ -327,15 +369,16 @@ const CreateEvents = () => {
                     {t("events.create.fields.eventDate", "Event Date")}
                   </Label>
                   <div className="relative">
-                    <input
-                      type="date"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleChange}
-                      className="w-full h-11 rounded-xl border border-border/60 bg-black/[0.02] px-3 pl-10 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30"
-                      required
+                    <BrandedDatePicker
+                      value={parseInputDate(formData.date)}
+                      onChange={(date) =>
+                        setFormData((previousData) => ({
+                          ...previousData,
+                          date: formatDateForInput(date),
+                        }))
+                      }
+                      placeholder="mm/dd/yyyy"
                     />
-                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
 
@@ -345,15 +388,13 @@ const CreateEvents = () => {
                     {t("events.create.fields.eventTime", "Event Time")}
                   </Label>
                   <div className="relative">
-                    <input
-                      type="time"
-                      name="time"
+                    <ModernTimeSelect
                       value={formData.time}
-                      onChange={handleChange}
-                      className="w-full h-11 rounded-xl border border-border/60 bg-black/[0.02] px-3 pl-10 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-brand-green/30"
+                      aria-label="Event time"
+                      onValueChange={(value) => setFormData((previousData) => ({ ...previousData, time: value }))}
+                      placeholder="Select time"
                       required
                     />
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
 
@@ -362,18 +403,18 @@ const CreateEvents = () => {
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     {t("events.create.fields.timeZone", "Timezone")}
                   </Label>
-                  <select
+                  <ModernSelect
                     name="timezone"
                     value={formData.timezone}
-                    onChange={handleChange}
-                    className={createEventSelectClassName}
+                    onValueChange={(value) => setFormData((previousData) => ({ ...previousData, timezone: value }))}
+                    options={timezones}
+                    placeholder={t("events.create.placeholders.selectTimezone", "Select Timezone")}
+                    searchPlaceholder="Search timezone..."
+                    emptyText="No timezone found."
+                    searchable
                     required
-                  >
-                    <option className={createEventOptionClassName} value="">{t("events.create.placeholders.selectTimezone", "Select Timezone")}</option>
-                    {timezones.map((timezone) => (
-                      <option className={createEventOptionClassName} key={timezone} value={timezone}>{timezone}</option>
-                    ))}
-                  </select>
+                    maxMenuHeight="18rem"
+                  />
                 </div>
               </div>
             </section>
@@ -388,29 +429,26 @@ const CreateEvents = () => {
                 
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">{t("events.create.fields.eventType", "Event Type")}</Label>
-                  <select
+                  <ModernSelect
                     name="free"
                     value={formData.free}
-                    onChange={handleChange}
-                    className={createEventSelectClassName}
-                  >
-                    <option className={createEventOptionClassName} value="1">{t("events.create.eventTypes.free", "Free")}</option>
-                    <option className={createEventOptionClassName} value="0">{t("events.create.eventTypes.paid", "Paid")}</option>
-                  </select>
+                    onValueChange={(value) => setFormData((previousData) => ({ ...previousData, free: value }))}
+                    options={[
+                      { value: "1", label: t("events.create.eventTypes.free", "Free") },
+                      { value: "0", label: t("events.create.eventTypes.paid", "Paid") },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">{t("events.create.fields.currency", "Currency")}</Label>
-                  <select
+                  <ModernSelect
                     name="currency"
                     value={formData.currency}
-                    onChange={handleChange}
+                    onValueChange={(value) => setFormData((previousData) => ({ ...previousData, currency: value }))}
+                    options={["NGN", "USD"]}
                     disabled={formData.free === "1"}
-                    className={`${createEventSelectClassName} disabled:opacity-50`}
-                  >
-                    <option className={createEventOptionClassName} value="NGN">NGN</option>
-                    <option className={createEventOptionClassName} value="USD">USD</option>
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -435,17 +473,17 @@ const CreateEvents = () => {
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     {t("events.create.fields.setReminder", "Auto-Reminder")}
                   </Label>
-                  <select
+                  <ModernSelect
                     name="reminder"
                     value={formData.reminder}
-                    onChange={handleChange}
-                    className={createEventSelectClassName}
+                    onValueChange={(value) => setFormData((previousData) => ({ ...previousData, reminder: value }))}
+                    options={[
+                      { value: "2", label: t("events.create.reminders.twoDays", "2 Days before") },
+                      { value: "1", label: t("events.create.reminders.oneDay", "1 Day before") },
+                    ]}
+                    placeholder={t("events.create.placeholders.selectReminder", "Select Reminder")}
                     required
-                  >
-                    <option className={createEventOptionClassName} value="">{t("events.create.placeholders.selectReminder", "Select Reminder")}</option>
-                    <option className={createEventOptionClassName} value="2">{t("events.create.reminders.twoDays", "2 Days before")}</option>
-                    <option className={createEventOptionClassName} value="1">{t("events.create.reminders.oneDay", "1 Day before")}</option>
-                  </select>
+                  />
                 </div>
               </div>
             </section>

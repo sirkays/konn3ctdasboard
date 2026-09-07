@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import { 
   ArrowLeft, Calendar as CalendarIcon,
   Video, MonitorPlay, AlignLeft, Globe, Mail, X, Check, 
-  ChevronLeft, ChevronRight, ChevronsUpDown,
   UploadCloud, Tag, DollarSign, Bell, User, FileText, Copy, ExternalLink
 } from "lucide-react";
 
@@ -22,16 +21,12 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../../components/ui/command";
 import { Skeleton } from "../../components/ui/skeleton";
+import { ModernSelect, ModernTimeSelect } from "../../components/ui/modern-select";
+import { BrandedCalendar, formatDateForInput } from "../../components/ui/branded-date-picker";
 
 const formatScheduleDate = (date) => {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatDateForInput(date);
 };
 
 const parseScheduleDate = (value) => {
@@ -212,80 +207,12 @@ const normalizeRecentEmails = (data) => {
   return [...new Set(emails.map((email) => email.trim()).filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))];
 };
 
-// --- Mini Calendar Helper ---
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const RECURRENCE_OPTIONS = [
   { value: "once", label: "Once" },
   { value: "daily", label: "Daily" },
   { value: "weekly", label: "Weekly" },
   { value: "monthly", label: "Monthly" },
 ];
-function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
-function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay(); }
-
-function CalendarPicker({ value, onChange, minDate }) {
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(value?.getFullYear() ?? today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(value?.getMonth() ?? today.getMonth());
-
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
-  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-
-  const isSelected = (day) => value?.getFullYear() === viewYear && value?.getMonth() === viewMonth && value?.getDate() === day;
-  const isDisabled = (day) => {
-    if (!minDate) return false;
-    const d = new Date(viewYear, viewMonth, day);
-    d.setHours(0, 0, 0, 0);
-    const min = new Date(minDate);
-    min.setHours(0, 0, 0, 0);
-    return d < min;
-  };
-  const isToday = (day) => today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === day;
-
-  const prevMonth = () => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); };
-  const nextMonth = () => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); };
-
-  return (
-    <div className="w-full select-none">
-      <div className="flex items-center justify-between mb-4">
-        <button type="button" onClick={prevMonth} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-black/[0.05] transition-colors text-muted-foreground">
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-bold text-foreground">{MONTHS[viewMonth]} {viewYear}</span>
-        <button type="button" onClick={nextMonth} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-black/[0.05] transition-colors text-muted-foreground">
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="grid grid-cols-7 mb-1">
-        {DAYS.map(d => <div key={d} className="text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground py-1">{d}</div>)}
-      </div>
-      <div className="grid grid-cols-7 gap-y-0.5">
-        {cells.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const disabled = isDisabled(day);
-          const selected = isSelected(day);
-          const todayCell = isToday(day);
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange(new Date(viewYear, viewMonth, day))}
-              className={`h-9 w-full rounded-lg text-sm font-medium transition-all
-                ${disabled ? "text-muted-foreground/30 cursor-not-allowed" : "cursor-pointer"}
-                ${selected ? "bg-brand-green text-white shadow-md shadow-brand-green/25" : todayCell && !disabled ? "border border-brand-green/40 text-brand-green font-bold hover:bg-brand-green/10" : !disabled ? "hover:bg-brand-green/10 text-foreground" : ""}
-              `}
-            >
-              {day}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // --- Main Page ---
 export default function NewSchedule() {
@@ -306,9 +233,6 @@ export default function NewSchedule() {
   const [emails, setEmails] = useState(() => initialScheduleValues.emails);
   const [emailInput, setEmailInput] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [roomOpen, setRoomOpen] = useState(false);
-  const [timezoneOpen, setTimezoneOpen] = useState(false);
-
   // Webinar-specific state
   const [webinarData, setWebinarData] = useState({
     host_name: "",
@@ -353,6 +277,11 @@ export default function NewSchedule() {
     staleTime: 1000 * 60 * 5,
   });
   const timezones = useMemo(() => buildTimezoneOptions(), []);
+  const rooms = useMemo(() => roomQuery.data?.rooms || [], [roomQuery.data?.rooms]);
+  const roomOptions = useMemo(
+    () => rooms.map((room) => ({ label: room.name, value: String(room.id) })),
+    [rooms]
+  );
   const recentEmailSuggestions = useMemo(
     () => normalizeRecentEmails(recentEmailsQuery.data).filter((email) => !emails.includes(email)),
     [emails, recentEmailsQuery.data]
@@ -618,7 +547,6 @@ export default function NewSchedule() {
     );
   }
 
-  const rooms = roomQuery.data?.rooms || [];
   const selectedRoomId = watch("room_id");
   const selectedTimezone = watch("timezone");
 
@@ -707,30 +635,16 @@ export default function NewSchedule() {
             {!isEditing && (
               <div id="field-room_id" className="space-y-2 scroll-mt-24">
                 <label className="text-sm font-semibold text-foreground">Link to Room <span className="text-red-500">*</span></label>
-                <Popover open={roomOpen} onOpenChange={setRoomOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={roomOpen} className={cn("w-full justify-between h-11 bg-black/[0.02] hover:bg-black/[0.04]", errors.room_id && "border-red-500")}>
-                      {selectedRoomId ? rooms.find(r => String(r.id) === selectedRoomId)?.name : "Select an existing room..."}
-                      <ChevronsUpDown className="ml-2 opacity-50 h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search room..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>No room found.</CommandEmpty>
-                        <CommandGroup>
-                          {rooms.map((room) => (
-                            <CommandItem key={room.id} value={String(room.name ?? "").toLowerCase()} onSelect={() => { setValue("room_id", String(room.id), { shouldValidate: true }); setRoomOpen(false); }}>
-                              {room.name}
-                              <Check className={cn("ml-auto", selectedRoomId === String(room.id) ? "opacity-100" : "opacity-0")} />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <ModernSelect
+                  value={selectedRoomId}
+                  onValueChange={(value) => setValue("room_id", value, { shouldValidate: true })}
+                  options={roomOptions}
+                  placeholder="Select an existing room..."
+                  searchPlaceholder="Search room..."
+                  emptyText="No room found."
+                  searchable
+                  invalid={Boolean(errors.room_id)}
+                />
                 {errors.room_id && <p className="text-xs text-red-500">{errors.room_id.message}</p>}
               </div>
             )}
@@ -751,7 +665,12 @@ export default function NewSchedule() {
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Date <span className="text-red-500">*</span></span>
                   {selectedDate && <span className="text-xs font-semibold text-brand-green bg-brand-green/10 px-2 py-0.5 rounded-md">{selectedDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>}
                 </div>
-                <CalendarPicker value={selectedDate} onChange={(d) => setValue("date", d, { shouldValidate: true })} minDate={new Date()} />
+                <BrandedCalendar
+                  value={selectedDate}
+                  onChange={(d) => setValue("date", d, { shouldValidate: true })}
+                  minDate={new Date()}
+                  className="max-w-none"
+                />
                 {errors.date && <p className="text-xs text-red-500 mt-2">{errors.date.message}</p>}
               </div>
 
@@ -759,12 +678,26 @@ export default function NewSchedule() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div id="field-fromtime" className="space-y-2 scroll-mt-24">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Start Time <span className="text-red-500">*</span></span>
-                    <Input type="time" {...register("fromtime")} className={cn("h-14 text-xl font-bold text-center bg-black/[0.02]", errors.fromtime && "border-red-500")} />
+                    <ModernTimeSelect
+                      value={watch("fromtime")}
+                      aria-label="Start time"
+                      onValueChange={(value) => setValue("fromtime", value, { shouldValidate: true })}
+                      placeholder="--:-- --"
+                      invalid={Boolean(errors.fromtime)}
+                      triggerClassName="h-14 justify-center text-xl font-bold"
+                    />
                     {errors.fromtime && <p className="text-xs text-red-500 text-center">{errors.fromtime.message}</p>}
                   </div>
                   <div id="field-totime" className="space-y-2 scroll-mt-24">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">End Time <span className="text-red-500">*</span></span>
-                    <Input type="time" {...register("totime")} className={cn("h-14 text-xl font-bold text-center bg-black/[0.02]", errors.totime && "border-red-500")} />
+                    <ModernTimeSelect
+                      value={watch("totime")}
+                      aria-label="End time"
+                      onValueChange={(value) => setValue("totime", value, { shouldValidate: true })}
+                      placeholder="--:-- --"
+                      invalid={Boolean(errors.totime)}
+                      triggerClassName="h-14 justify-center text-xl font-bold"
+                    />
                     {errors.totime && <p className="text-xs text-red-500 text-center">{errors.totime.message}</p>}
                   </div>
                 </div>
@@ -776,45 +709,32 @@ export default function NewSchedule() {
                 <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
                 <label className="text-sm font-semibold text-foreground shrink-0">Timezone <span className="text-red-500">*</span></label>
                 <div className="flex-1 max-w-xs">
-                <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" role="combobox" aria-expanded={timezoneOpen} className={cn("w-full justify-between h-10 bg-surface", errors.timezone && "border-red-500")}>
-                      {selectedTimezone ? timezones.find((tz) => tz.value === selectedTimezone)?.label : "Select Timezone"}
-                      <ChevronsUpDown className="ml-2 opacity-50 h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search timezone..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>No timezone found.</CommandEmpty>
-                        <CommandGroup>
-                          {timezones.map((tz) => (
-                            <CommandItem key={tz.value} value={tz.value} onSelect={() => { setValue("timezone", tz.value, { shouldValidate: true }); setTimezoneOpen(false); }}>
-                              {tz.label}
-                              <Check className={cn("ml-auto", selectedTimezone === tz.value ? "opacity-100" : "opacity-0")} />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {errors.timezone && <p className="text-xs text-red-500 mt-1">{errors.timezone.message}</p>}
+                  <ModernSelect
+                    value={selectedTimezone}
+                    onValueChange={(value) => setValue("timezone", value, { shouldValidate: true })}
+                    options={timezones}
+                    placeholder="Select Timezone"
+                    searchPlaceholder="Search timezone..."
+                    emptyText="No timezone found."
+                    searchable
+                    invalid={Boolean(errors.timezone)}
+                    triggerClassName="h-10 bg-surface"
+                    menuClassName="min-w-[300px]"
+                    maxMenuHeight="18rem"
+                  />
+                  {errors.timezone && <p className="text-xs text-red-500 mt-1">{errors.timezone.message}</p>}
                 </div>
               </div>
               <div id="field-recurrence" className="space-y-1 scroll-mt-24">
                 <label className="text-sm font-semibold text-foreground">Recurrence</label>
-                <select
-                  {...register("recurrence")}
-                  className="h-10 w-full rounded-md border border-input bg-surface px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {RECURRENCE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <ModernSelect
+                  value={watch("recurrence")}
+                  onValueChange={(value) => setValue("recurrence", value, { shouldValidate: true })}
+                  options={RECURRENCE_OPTIONS}
+                  invalid={Boolean(errors.recurrence)}
+                  triggerClassName="h-10 bg-surface rounded-lg"
+                  maxMenuHeight="12rem"
+                />
                 {errors.recurrence && <p className="text-xs text-red-500">{errors.recurrence.message}</p>}
               </div>
             </div>
@@ -924,15 +844,16 @@ export default function NewSchedule() {
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     Public Listing
                   </Label>
-                  <select
+                  <ModernSelect
                     name="public"
                     value={webinarData.public}
-                    onChange={handleWebinarChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                  >
-                    <option value="1">Public — Listed in event directory</option>
-                    <option value="0">Private — Only accessible via link</option>
-                  </select>
+                    onValueChange={(value) => setWebinarData((prev) => ({ ...prev, public: value }))}
+                    options={[
+                      { value: "1", label: "Public - Listed in event directory" },
+                      { value: "0", label: "Private - Only accessible via link" },
+                    ]}
+                    accent="blue"
+                  />
                 </div>
               </div>
 
@@ -960,29 +881,28 @@ export default function NewSchedule() {
                     <Tag className="h-4 w-4 text-muted-foreground" />
                     Event Type
                   </Label>
-                  <select
+                  <ModernSelect
                     name="free"
                     value={webinarData.free}
-                    onChange={handleWebinarChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                  >
-                    <option value="1">Free</option>
-                    <option value="0">Paid</option>
-                  </select>
+                    onValueChange={(value) => setWebinarData((prev) => ({ ...prev, free: value }))}
+                    options={[
+                      { value: "1", label: "Free" },
+                      { value: "0", label: "Paid" },
+                    ]}
+                    accent="blue"
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">Currency</Label>
-                  <select
+                  <ModernSelect
                     name="currency"
                     value={webinarData.currency}
-                    onChange={handleWebinarChange}
+                    onValueChange={(value) => setWebinarData((prev) => ({ ...prev, currency: value }))}
+                    options={["NGN", "USD"]}
                     disabled={webinarData.free === "1"}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30 disabled:opacity-50"
-                  >
-                    <option value="NGN">NGN</option>
-                    <option value="USD">USD</option>
-                  </select>
+                    accent="blue"
+                  />
                 </div>
 
                 <div id="field-webinar-amount" className="space-y-2 scroll-mt-24">
@@ -1006,16 +926,17 @@ export default function NewSchedule() {
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     Auto-Reminder <span className="text-red-500">*</span>
                   </Label>
-                  <select
+                  <ModernSelect
                     name="reminder"
                     value={webinarData.reminder}
-                    onChange={handleWebinarChange}
-                    className="flex h-11 w-full rounded-xl border border-border/60 bg-black/[0.02] px-3 py-2 text-sm text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-                  >
-                    <option value="">Select Reminder</option>
-                    <option value="2">2 Days before</option>
-                    <option value="1">1 Day before</option>
-                  </select>
+                    onValueChange={(value) => setWebinarData((prev) => ({ ...prev, reminder: value }))}
+                    options={[
+                      { value: "2", label: "2 Days before" },
+                      { value: "1", label: "1 Day before" },
+                    ]}
+                    placeholder="Select Reminder"
+                    accent="blue"
+                  />
                 </div>
               </div>
 

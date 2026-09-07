@@ -20,6 +20,7 @@ import {
   CardContent,
 } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
+import ReferralCard from "../components/ReferralCard";
 import join from "../assets/icons/add-square.svg";
 import video from "../assets/icons/video-01.svg";
 
@@ -261,6 +262,8 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          <ReferralCard user={user} />
 
           <div>
             <div className="flex items-center justify-between mb-4">
