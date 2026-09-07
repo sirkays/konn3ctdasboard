@@ -696,7 +696,7 @@ const Recordings = () => {
                   </Button>
                   <Button
                     size="sm"
-                    className="text-xs bg-brand-blue text-white hover:bg-brand-blue/90 rounded-lg"
+                    className="main-action-button text-xs rounded-lg"
                     onClick={() => setVideoError(false)}
                   >
                     Retry

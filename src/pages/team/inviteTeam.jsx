@@ -166,7 +166,7 @@ const InviteTeam = ({ isSubmitting = false, onInvite }) => {
         </DialogClose>
         <Button
           type="submit"
-          className="h-11 rounded-xl bg-brand-green px-5 text-sm font-semibold text-white shadow-none hover:bg-[#287854]"
+          className="main-action-button h-11 rounded-xl px-5 text-sm font-semibold"
           disabled={!email.trim() || isSubmitting}
         >
           {isSubmitting ? "Sending..." : "Send Invite"}

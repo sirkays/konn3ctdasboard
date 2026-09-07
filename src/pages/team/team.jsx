@@ -425,7 +425,7 @@ const Team = () => {
           <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
             <Button
               type="button"
-              className="h-11 w-full rounded-xl bg-brand-green px-5 text-sm font-semibold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854] sm:w-auto"
+              className="main-action-button h-11 w-full rounded-xl px-5 text-sm font-semibold sm:w-auto"
               onClick={handleInviteClick}
               disabled={teamQuery.isLoading || profileQuery.isLoading}
             >
@@ -979,7 +979,7 @@ const UpdateRoleDialog = ({ member, open, onOpenChange, isSubmitting, onSubmit }
             <Button variant="outline" className="h-10 rounded-xl">Cancel</Button>
           </DialogClose>
           <Button
-            className="h-10 rounded-xl bg-brand-green text-white hover:bg-[#287854]"
+            className="main-action-button h-10 rounded-xl"
             disabled={isSubmitting}
             onClick={() => onSubmit(role)}
           >
@@ -1043,7 +1043,7 @@ const ResetPasswordDialog = ({ member, open, onOpenChange, isSubmitting, onSubmi
             <Button variant="outline" className="h-10 rounded-xl" disabled={isSubmitting}>Cancel</Button>
           </DialogClose>
           <Button
-            className="h-10 rounded-xl bg-brand-green text-white hover:bg-[#287854]"
+            className="main-action-button h-10 rounded-xl"
             disabled={isSubmitting || password.length < 8}
             onClick={() => onSubmit(password)}
           >

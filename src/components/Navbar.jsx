@@ -119,7 +119,7 @@ const Navbar = () => {
                 {t("app.navbar.signIn")}
               </Link>
               <Link to="/register">
-                <Button className="bg-[#012E89] text-white rounded-full">
+                <Button className="main-action-button rounded-full">
                   {t("app.navbar.signUpFree")}
                 </Button>
               </Link>
@@ -174,7 +174,7 @@ const Navbar = () => {
                 {t("app.navbar.signIn")}
               </Link>
               <Link className="block" to="/register">
-                <Button className="w-full bg-[#012E89] text-white rounded-full">
+                <Button className="main-action-button w-full rounded-full">
                   {t("app.navbar.signUpFree")}
                 </Button>
               </Link>

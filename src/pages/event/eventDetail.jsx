@@ -346,7 +346,7 @@ const EventDetail = () => {
     return (
       <div className="flex h-[calc(100vh-100px)] w-full flex-col items-center justify-center gap-4">
         <p className="text-xl font-extrabold text-foreground">Event not found</p>
-        <Button onClick={() => navigate("/events")} className="rounded-xl bg-brand-blue text-white hover:bg-brand-blue/90">
+        <Button onClick={() => navigate("/events")} className="main-action-button rounded-xl">
           Back to Events
         </Button>
       </div>
@@ -384,9 +384,9 @@ const EventDetail = () => {
 
         <Button
           onClick={copyRegistrationLink}
-          className="h-[50px] w-full rounded-xl bg-brand-blue px-6 text-base font-bold text-white shadow-[0_14px_28px_rgba(0,44,136,0.2)] hover:bg-brand-blue/90 sm:w-auto"
+          className="main-action-button h-11 w-full rounded-xl px-5 text-sm font-bold sm:w-auto"
         >
-          <Share2 className="h-5 w-5" />
+          <Share2 className="h-4 w-4" />
           Share Registration Link
         </Button>
       </div>

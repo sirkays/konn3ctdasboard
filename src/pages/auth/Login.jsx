@@ -431,7 +431,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="h-12 w-full rounded-xl bg-[#207450] text-base font-semibold text-white shadow-lg shadow-[#207450]/20 hover:bg-[#185f41]"
+            className="main-action-button h-12 w-full rounded-xl text-base font-semibold"
             disabled={loginMutation.isPending}
           >
             {t("auth.login.submit")}

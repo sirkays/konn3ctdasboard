@@ -127,7 +127,7 @@ export default function IndividualDonation({ onComplete }) {
               </ul>
             </div>
             <Button 
-              className="w-full h-11 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] font-semibold transition-all" 
+              className="main-action-button w-full h-11 rounded-xl font-semibold" 
               onClick={() => setStep("form")}
             >
               {t("donations.actions.startVerification", "Start Verification")}
@@ -333,7 +333,7 @@ export default function IndividualDonation({ onComplete }) {
                 {t("common.actions.cancel", "Cancel")}
               </Button>
               <Button 
-                className="w-full sm:w-auto h-12 px-8 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)] font-semibold transition-all"
+                className="main-action-button w-full sm:w-auto h-12 px-8 rounded-xl font-semibold"
                 onClick={handleSubmit}
                 disabled={!accountName || !formData.id_document}
               >

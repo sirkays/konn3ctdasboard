@@ -400,7 +400,7 @@ export default function ScheduleDetails() {
                 type="button"
                 onClick={handleJoin}
                 disabled={!joinLink}
-                className="mt-5 h-12 w-full rounded-xl bg-brand-green text-base font-extrabold text-white shadow-lg shadow-brand-green/20 hover:bg-[#287854]"
+                className="main-action-button mt-5 h-12 w-full rounded-xl text-base font-extrabold"
               >
                 <Video className="h-4 w-4" />
                 Join Early

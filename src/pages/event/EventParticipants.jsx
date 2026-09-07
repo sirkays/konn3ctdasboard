@@ -159,7 +159,7 @@ const EventParticipants = () => {
           <Button
             onClick={sendReminderNow}
             disabled={actionLoading || participants.length === 0}
-            className="h-10 rounded-xl bg-brand-green hover:bg-[#287854] text-white shadow-[0_4px_14px_rgba(32,116,80,0.2)] font-semibold transition-all"
+            className="main-action-button h-10 rounded-xl font-semibold"
           >
             {actionLoading ? (
                <div className="flex items-center gap-2">

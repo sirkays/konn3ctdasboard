@@ -364,7 +364,7 @@ const JoinForm = () => {
           </div>
           <Button
             type="submit"
-            className="h-12 w-full rounded-xl bg-brand-blue font-bold text-white shadow-[0_8px_24px_rgba(0,44,136,0.25)] hover:bg-[#0038A8]"
+            className="main-action-button h-12 w-full rounded-xl font-bold"
             disabled={joinMutation.isPending}
           >
             {joinMutation.isPending

@@ -441,9 +441,9 @@ const EventDashboard = () => {
 
         <Button
           onClick={() => navigate("/events/create")}
-          className="h-[50px] w-full rounded-xl bg-[#ff920a] px-7 text-base font-bold text-white shadow-[0_14px_28px_rgba(255,146,10,0.25)] hover:bg-[#eb8505] sm:w-auto"
+          className="main-action-button h-11 w-full rounded-xl px-5 text-sm font-bold sm:w-auto"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           Create Event
         </Button>
       </div>

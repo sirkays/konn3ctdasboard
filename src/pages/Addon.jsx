@@ -158,7 +158,7 @@ const Addon = () => {
                 <div className="mt-auto">
                   <div className="w-full">
                     <PaystackButton
-                      className={`w-full h-11 rounded-xl font-semibold transition-all inline-flex items-center justify-center text-sm ${isActive ? "bg-brand-green hover:bg-[#287854] text-white shadow-[0_6px_20px_rgba(32,116,80,0.2)]" : "bg-primary hover:bg-primary/90 text-primary-foreground"}`}
+                      className="main-action-button w-full h-11 rounded-xl font-semibold inline-flex items-center justify-center text-sm"
                       {...componentProps}
                     />
                   </div>
