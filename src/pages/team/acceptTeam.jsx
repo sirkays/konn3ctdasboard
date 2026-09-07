@@ -413,12 +413,11 @@ const AcceptTeam = () => {
 
             {/* Submit Button */}
             {isActivated ? (
-<<<<<<< HEAD
               isCurrentLoggedInUser ? (
                 <Button
                   asChild
                   type="button"
-                  className="mt-6 h-12 w-full rounded-xl bg-[#207450] text-sm font-semibold text-white shadow-none hover:bg-[#1a5f41] transition-all"
+                  className="main-action-button mt-6 h-12 w-full rounded-xl text-sm font-semibold"
                 >
                   <Link to="/team" className="flex items-center justify-center gap-2">
                     <span>Go to Team Workspace</span>
@@ -429,7 +428,7 @@ const AcceptTeam = () => {
                 <Button
                   asChild
                   type="button"
-                  className="mt-6 h-12 w-full rounded-xl bg-[#207450] text-sm font-semibold text-white shadow-none hover:bg-[#1a5f41] transition-all"
+                  className="main-action-button mt-6 h-12 w-full rounded-xl text-sm font-semibold"
                 >
                   <Link
                     to="/login"
@@ -441,18 +440,6 @@ const AcceptTeam = () => {
                   </Link>
                 </Button>
               )
-=======
-              <Button
-                asChild
-                type="button"
-                className="main-action-button mt-6 h-12 w-full rounded-xl text-sm font-semibold"
-              >
-                <Link to="/login" className="flex items-center justify-center gap-2">
-                  <span>Continue to Sign In</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
->>>>>>> 8e043916fa9c2e3b837cf8053e866e6919c607c3
             ) : (
               <Button
                 type="submit"
