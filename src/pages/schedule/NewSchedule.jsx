@@ -680,6 +680,7 @@ export default function NewSchedule() {
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">Start Time <span className="text-red-500">*</span></span>
                     <ModernTimeSelect
                       value={watch("fromtime")}
+                      aria-label="Start time"
                       onValueChange={(value) => setValue("fromtime", value, { shouldValidate: true })}
                       placeholder="--:-- --"
                       invalid={Boolean(errors.fromtime)}
@@ -691,6 +692,7 @@ export default function NewSchedule() {
                     <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">End Time <span className="text-red-500">*</span></span>
                     <ModernTimeSelect
                       value={watch("totime")}
+                      aria-label="End time"
                       onValueChange={(value) => setValue("totime", value, { shouldValidate: true })}
                       placeholder="--:-- --"
                       invalid={Boolean(errors.totime)}

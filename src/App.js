@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, CalendarDays, KeyRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
@@ -34,7 +34,7 @@ import AcceptTeam from "./pages/team/acceptTeam";
 import Team from "./pages/team/team";
 import EventParticipants from "./pages/event/EventParticipants";
 import Events from "./pages/event/Events";
-import ViewProfile from "./pages/view-profile/ViewProfile";
+// import ViewProfile from "./pages/view-profile/ViewProfile";
 import EventIcon from "./assets/components/EventIcon";
 import HomeIcon from "./assets/components/HomeIcon";
 import CardIcon from "./assets/components/CardIcon";
@@ -110,7 +110,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: AttendanceIcon,
     },
     
-    // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
+    { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
 
@@ -377,10 +377,11 @@ const router = createBrowserRouter([
           </>
         ),
       },
-      {
-        path: "view-profile",
-        element: <ViewProfile />,
-      },
+      // Temporarily disabled: public profile preview.
+      // {
+      //   path: "view-profile",
+      //   element: <ViewProfile />,
+      // },
       {
         path: "team-invite/:activationToken",
         element: <AcceptTeam />,

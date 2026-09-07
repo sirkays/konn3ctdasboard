@@ -1,5 +1,6 @@
 import React from "react";
-import { Bell, ChevronRight, Eye, Monitor, Palette, Shield, User } from "lucide-react";
+import { Bell, ChevronRight, Monitor, Palette, Shield, User } from "lucide-react";
+// import { Eye } from "lucide-react";
 
 import { cn } from "../../../lib/utils";
 
@@ -10,12 +11,13 @@ export const SETTINGS_SECTIONS = [
     title: "Profile",
     description: "Manage your personal information",
   },
-  {
-    id: "view-profile",
-    icon: Eye,
-    title: "View Profile",
-    description: "Preview your public profile experience",
-  },
+  // Temporarily disabled: public profile preview.
+  // {
+  //   id: "view-profile",
+  //   icon: Eye,
+  //   title: "View Profile",
+  //   description: "Preview your public profile experience",
+  // },
   {
     id: "security",
     icon: Shield,
