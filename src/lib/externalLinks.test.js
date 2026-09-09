@@ -18,6 +18,8 @@ import {
   normalizeYouTubeEmbedUrl,
   DEFAULT_CONTACT_SALES_URL,
   getContactSalesUrl,
+  normalizeMeetingHost,
+  extractRoomSlug,
   normalizeKonn3ctDomain,
   normalizeMeetingUrl,
 } from "./externalLinks";
@@ -375,48 +377,99 @@ describe("externalLinks meeting join and event URL helpers", () => {
       expect(getFlagUrl()).toBe("https://flag-only.konn3ct.net/join");
     });
 
-    it("identifies matching flag URLs accurately with isFlagUrl", () => {
+    it("identifies matching flag URLs accurately with isFlagUrl including variations without /join", () => {
       expect(isFlagUrl("https://k4.edge.konn3ct.net/join")).toBe(true);
       expect(isFlagUrl("https://k4.edge.konn3ct.net/join/")).toBe(true);
       expect(isFlagUrl("http://k4.edge.konn3ct.net/join")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/")).toBe(true);
+      expect(isFlagUrl("k4.edge.konn3ct.net")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/room/replaceRoomURL")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/replaceRoomURL")).toBe(true);
       expect(isFlagUrl("https://k4.edge.konn3ct.net/join/Abd6ba630")).toBe(true);
       expect(isFlagUrl("https://k4.edge.konn3ct.net/join/replaceRoomURL")).toBe(true);
       expect(isFlagUrl("https://edge.konn3ct.net/join")).toBe(false);
       expect(isFlagUrl("https://edge.konn3ct.net/join/Abd6ba630")).toBe(false);
     });
 
-    it("falls back getJoinMeetingBaseUrl to https://edge.konn3ct.net/join when base url matches FLAG_URL", () => {
+    it("falls back getJoinMeetingBaseUrl to https://edge.konn3ct.net/join when base url matches FLAG_URL or k4", () => {
       process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
       expect(getJoinMeetingBaseUrl()).toBe("https://edge.konn3ct.net/join");
       expect(getJoinMeetingBaseUrl("https://k4.edge.konn3ct.net/join")).toBe("https://edge.konn3ct.net/join");
+      expect(getJoinMeetingBaseUrl("https://k4.edge.konn3ct.net")).toBe("https://edge.konn3ct.net/join");
       expect(getJoinMeetingDisplayPrefix()).toBe("edge.konn3ct.net/join/");
     });
 
-    it("falls back buildRoomJoinUrl to https://edge.konn3ct.net/join/<slug> when REACT_APP_JOIN_MEETING_URL matches FLAG_URL", () => {
+    it("falls back buildRoomJoinUrl to https://edge.konn3ct.net/join/<slug> when REACT_APP_JOIN_MEETING_URL matches FLAG_URL or k4", () => {
       process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
       expect(buildRoomJoinUrl("Abd6ba630")).toBe("https://edge.konn3ct.net/join/Abd6ba630");
+
+      process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net";
+      expect(buildRoomJoinUrl("konn3ct-conversations-2026")).toBe(
+        "https://edge.konn3ct.net/join/konn3ct-conversations-2026"
+      );
     });
 
-    it("rejects roomLinkTemplate matching FLAG_URL and falls back to default join URL", () => {
+    it("extracts slug and builds room URL correctly even if roomSlug is a full URL", () => {
+      expect(
+        buildRoomJoinUrl("https://k4.edge.konn3ct.net/join/konn3ct-conversations-2026")
+      ).toBe("https://edge.konn3ct.net/join/konn3ct-conversations-2026");
+
+      expect(
+        buildRoomJoinUrl("/join/konn3ct-conversations-2026/")
+      ).toBe("https://edge.konn3ct.net/join/konn3ct-conversations-2026");
+    });
+
+    it("rejects roomLinkTemplate matching FLAG_URL or k4 and falls back to default join URL", () => {
       const template = "https://k4.edge.konn3ct.net/join/replaceRoomURL";
       expect(buildRoomJoinUrl("Abd6ba630", template)).toBe("https://edge.konn3ct.net/join/Abd6ba630");
 
       const directTemplate = "https://k4.edge.konn3ct.net/join";
       expect(buildRoomJoinUrl("Abd6ba630", directTemplate)).toBe("https://edge.konn3ct.net/join/Abd6ba630");
+
+      const noJoinTemplate = "https://k4.edge.konn3ct.net/replaceRoomURL";
+      expect(buildRoomJoinUrl("konn3ct-conversations-2026", noJoinTemplate)).toBe(
+        "https://edge.konn3ct.net/join/konn3ct-conversations-2026"
+      );
     });
 
-    it("falls back buildJoinMeetingUrl to DEFAULT_JOIN_MEETING_URL when REACT_APP_JOIN_MEETING_URL matches FLAG_URL", () => {
+    it("falls back buildJoinMeetingUrl to DEFAULT_JOIN_MEETING_URL when REACT_APP_JOIN_MEETING_URL matches FLAG_URL or k4", () => {
       process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
       expect(buildJoinMeetingUrl("token-123")).toBe("https://edge.konn3ct.net/join?sessionToken=token-123");
+
+      process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net";
+      expect(buildJoinMeetingUrl("token-456")).toBe("https://edge.konn3ct.net/join?sessionToken=token-456");
     });
 
-    it("normalizes meeting URL matching FLAG_URL to edge.konn3ct.net/join/<slug>", () => {
+    it("normalizes meeting URL matching FLAG_URL or k4 to edge.konn3ct.net/join/<slug>", () => {
       expect(normalizeMeetingUrl("https://k4.edge.konn3ct.net/join/Abd6ba630")).toBe(
         "https://edge.konn3ct.net/join/Abd6ba630"
       );
       expect(normalizeMeetingUrl("https://k4.edge.konn3ct.net/join", "fallback-slug")).toBe(
         "https://edge.konn3ct.net/join/fallback-slug"
       );
+      expect(normalizeMeetingUrl("https://k4.edge.konn3ct.net/join/konn3ct-conversations-2026")).toBe(
+        "https://edge.konn3ct.net/join/konn3ct-conversations-2026"
+      );
+    });
+
+    it("normalizes k4.edge.konn3ct.net to edge.konn3ct.net with normalizeMeetingHost", () => {
+      expect(normalizeMeetingHost("https://k4.edge.konn3ct.net/join/xyz")).toBe(
+        "https://edge.konn3ct.net/join/xyz"
+      );
+      expect(normalizeMeetingHost("https://konn3ct.com/join/xyz")).toBe(
+        "https://edge.konn3ct.net/join/xyz"
+      );
+    });
+
+    it("extracts room slug accurately with extractRoomSlug", () => {
+      expect(extractRoomSlug("konn3ct-conversations-2026")).toBe("konn3ct-conversations-2026");
+      expect(extractRoomSlug("https://k4.edge.konn3ct.net/join/konn3ct-conversations-2026")).toBe(
+        "konn3ct-conversations-2026"
+      );
+      expect(extractRoomSlug("/join/konn3ct-conversations-2026/")).toBe("konn3ct-conversations-2026");
+      expect(extractRoomSlug("")).toBe("");
+      expect(extractRoomSlug(null)).toBe("");
     });
   });
 });

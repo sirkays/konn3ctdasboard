@@ -72,7 +72,6 @@ import TeamDetail from "./component/teamDetail";
 import UpgradeTeam from "./component/upgradeTeam";
 
 const TEAM_QUERY_KEY = ["team-list"];
-const API_BASE_URL = String(process.env.REACT_APP_BASE_URL || "").replace(/\/$/, "");
 const DASHBOARD_BASE_URL = String(process.env.REACT_APP_SITE_URL || window.location.origin).replace(/\/$/, "");
 const TEAM_ACTIVATION_LINK_BASE = `${DASHBOARD_BASE_URL}/team-invite`;
 const roleOptions = ["Owner", "Admin", "Member"];
