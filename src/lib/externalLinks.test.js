@@ -2,6 +2,9 @@ import {
   DEFAULT_LANDING_URL,
   getLandingUrl,
   DEFAULT_JOIN_MEETING_URL,
+  DEFAULT_FLAG_URL,
+  getFlagUrl,
+  isFlagUrl,
   isBackendUrl,
   getJoinMeetingBaseUrl,
   getJoinMeetingDisplayPrefix,
@@ -32,6 +35,8 @@ describe("externalLinks meeting join and event URL helpers", () => {
     delete process.env.REACT_APP_PRIVACY_POLICY_URL;
     delete process.env.REACT_APP_GETTING_STARTED_VIDEO_URL;
     delete process.env.REACT_APP_CONTACT_SALES_URL;
+    delete process.env.REACT_APP_FLAG_URL;
+    delete process.env.FLAG_URL;
   });
 
   afterAll(() => {
@@ -351,6 +356,66 @@ describe("externalLinks meeting join and event URL helpers", () => {
     it("builds from slug if raw URL is empty", () => {
       expect(normalizeMeetingUrl("", "fallback-room")).toBe(
         "https://edge.konn3ct.net/join/fallback-room"
+      );
+    });
+  });
+
+  describe("FLAG_URL detection and fallback to DEFAULT_JOIN_MEETING_URL", () => {
+    it("defaults DEFAULT_FLAG_URL to https://k4.edge.konn3ct.net/join", () => {
+      expect(DEFAULT_FLAG_URL).toBe("https://k4.edge.konn3ct.net/join");
+      expect(getFlagUrl()).toBe("https://k4.edge.konn3ct.net/join");
+    });
+
+    it("reads custom FLAG_URL or REACT_APP_FLAG_URL when set in environment", () => {
+      process.env.REACT_APP_FLAG_URL = "https://custom-flag.konn3ct.net/join";
+      expect(getFlagUrl()).toBe("https://custom-flag.konn3ct.net/join");
+
+      delete process.env.REACT_APP_FLAG_URL;
+      process.env.FLAG_URL = "https://flag-only.konn3ct.net/join";
+      expect(getFlagUrl()).toBe("https://flag-only.konn3ct.net/join");
+    });
+
+    it("identifies matching flag URLs accurately with isFlagUrl", () => {
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/join")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/join/")).toBe(true);
+      expect(isFlagUrl("http://k4.edge.konn3ct.net/join")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/join/Abd6ba630")).toBe(true);
+      expect(isFlagUrl("https://k4.edge.konn3ct.net/join/replaceRoomURL")).toBe(true);
+      expect(isFlagUrl("https://edge.konn3ct.net/join")).toBe(false);
+      expect(isFlagUrl("https://edge.konn3ct.net/join/Abd6ba630")).toBe(false);
+    });
+
+    it("falls back getJoinMeetingBaseUrl to https://edge.konn3ct.net/join when base url matches FLAG_URL", () => {
+      process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
+      expect(getJoinMeetingBaseUrl()).toBe("https://edge.konn3ct.net/join");
+      expect(getJoinMeetingBaseUrl("https://k4.edge.konn3ct.net/join")).toBe("https://edge.konn3ct.net/join");
+      expect(getJoinMeetingDisplayPrefix()).toBe("edge.konn3ct.net/join/");
+    });
+
+    it("falls back buildRoomJoinUrl to https://edge.konn3ct.net/join/<slug> when REACT_APP_JOIN_MEETING_URL matches FLAG_URL", () => {
+      process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
+      expect(buildRoomJoinUrl("Abd6ba630")).toBe("https://edge.konn3ct.net/join/Abd6ba630");
+    });
+
+    it("rejects roomLinkTemplate matching FLAG_URL and falls back to default join URL", () => {
+      const template = "https://k4.edge.konn3ct.net/join/replaceRoomURL";
+      expect(buildRoomJoinUrl("Abd6ba630", template)).toBe("https://edge.konn3ct.net/join/Abd6ba630");
+
+      const directTemplate = "https://k4.edge.konn3ct.net/join";
+      expect(buildRoomJoinUrl("Abd6ba630", directTemplate)).toBe("https://edge.konn3ct.net/join/Abd6ba630");
+    });
+
+    it("falls back buildJoinMeetingUrl to DEFAULT_JOIN_MEETING_URL when REACT_APP_JOIN_MEETING_URL matches FLAG_URL", () => {
+      process.env.REACT_APP_JOIN_MEETING_URL = "https://k4.edge.konn3ct.net/join";
+      expect(buildJoinMeetingUrl("token-123")).toBe("https://edge.konn3ct.net/join?sessionToken=token-123");
+    });
+
+    it("normalizes meeting URL matching FLAG_URL to edge.konn3ct.net/join/<slug>", () => {
+      expect(normalizeMeetingUrl("https://k4.edge.konn3ct.net/join/Abd6ba630")).toBe(
+        "https://edge.konn3ct.net/join/Abd6ba630"
+      );
+      expect(normalizeMeetingUrl("https://k4.edge.konn3ct.net/join", "fallback-slug")).toBe(
+        "https://edge.konn3ct.net/join/fallback-slug"
       );
     });
   });

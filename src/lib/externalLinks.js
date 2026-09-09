@@ -140,6 +140,36 @@ export const buildEventRegistrationUrl = (reference, rawUrl) => {
 };
 
 export const DEFAULT_JOIN_MEETING_URL = "https://edge.konn3ct.net/join";
+export const DEFAULT_FLAG_URL = "https://k4.edge.konn3ct.net/join";
+
+export const getFlagUrl = () => {
+  const raw = readEnv(process.env.REACT_APP_FLAG_URL) || readEnv(process.env.FLAG_URL);
+  return raw || DEFAULT_FLAG_URL;
+};
+
+export const isFlagUrl = (url, customFlagUrl) => {
+  if (!url || typeof url !== "string") return false;
+
+  const flag = readEnv(customFlagUrl) || getFlagUrl();
+  if (!flag) return false;
+
+  const normalize = (val) =>
+    val
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/+$/, "");
+
+  const normalizedFlag = normalize(flag);
+  const normalizedUrl = normalize(url);
+
+  if (!normalizedFlag || !normalizedUrl) return false;
+
+  if (normalizedUrl === normalizedFlag) return true;
+  if (normalizedUrl.startsWith(`${normalizedFlag}/`)) return true;
+
+  return false;
+};
 
 export const isBackendUrl = (url) => {
   if (!url || typeof url !== "string") return false;
@@ -157,7 +187,7 @@ export const isBackendUrl = (url) => {
 export const getJoinMeetingBaseUrl = (customBaseUrl) => {
   const raw = readEnv(customBaseUrl) || readEnv(process.env.REACT_APP_JOIN_MEETING_URL);
 
-  if (!raw || isBackendUrl(raw)) {
+  if (!raw || isBackendUrl(raw) || isFlagUrl(raw)) {
     return DEFAULT_JOIN_MEETING_URL;
   }
 
@@ -189,12 +219,12 @@ export const buildRoomJoinUrl = (roomSlug, roomLinkTemplate) => {
   }
 
   const envJoinUrl = readEnv(process.env.REACT_APP_JOIN_MEETING_URL);
-  if (envJoinUrl && !isBackendUrl(envJoinUrl)) {
+  if (envJoinUrl && !isBackendUrl(envJoinUrl) && !isFlagUrl(envJoinUrl)) {
     return `${getJoinMeetingBaseUrl(envJoinUrl)}/${cleanSlug}`;
   }
 
   const template = readEnv(roomLinkTemplate);
-  if (template && !isBackendUrl(template)) {
+  if (template && !isBackendUrl(template) && !isFlagUrl(template)) {
     const normalizedTemplate = template.replace(/konn3ct\.(?:com|ng)/gi, "edge.konn3ct.net");
     if (normalizedTemplate.includes("replaceRoomURL")) {
       return normalizedTemplate.replace("replaceRoomURL", cleanSlug);
@@ -210,8 +240,11 @@ export const buildRoomJoinUrl = (roomSlug, roomLinkTemplate) => {
 };
 
 export const buildJoinMeetingUrl = (sessionToken) => {
-  const rawUrl = readEnv(process.env.REACT_APP_JOIN_MEETING_URL) || DEFAULT_JOIN_MEETING_URL;
-  const meetingUrl = rawUrl.replace(/konn3ct\.(?:com|ng)/gi, "edge.konn3ct.net");
+  const rawUrl = readEnv(process.env.REACT_APP_JOIN_MEETING_URL);
+  const baseToUse = (rawUrl && !isBackendUrl(rawUrl) && !isFlagUrl(rawUrl))
+    ? rawUrl
+    : DEFAULT_JOIN_MEETING_URL;
+  const meetingUrl = baseToUse.replace(/konn3ct\.(?:com|ng)/gi, "edge.konn3ct.net");
   if (!meetingUrl || !sessionToken) {
     return "";
   }
@@ -231,7 +264,7 @@ export const normalizeMeetingUrl = (url, slug = "") => {
     return slug ? buildRoomJoinUrl(slug) : "";
   }
 
-  if (isBackendUrl(raw)) {
+  if (isBackendUrl(raw) || isFlagUrl(raw)) {
     const slugMatch = raw.match(/\/join\/([^/?#]+)/i);
     const extractedSlug = slugMatch?.[1] || slug;
     return extractedSlug ? buildRoomJoinUrl(extractedSlug) : getJoinMeetingBaseUrl();
