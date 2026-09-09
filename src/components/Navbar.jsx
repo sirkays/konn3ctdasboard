@@ -17,6 +17,7 @@ import { getUser } from "../api/userApi";
 import { Button } from "./ui/button";
 import { Menu, X } from "lucide-react"; // icons for mobile toggle
 import { useTranslation } from "react-i18next";
+import { getLandingUrl } from "../lib/externalLinks";
 
 const Navbar = () => {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ const Navbar = () => {
   });
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const landingUrl = getLandingUrl();
 
   return (
     <nav className="fixed top-0 z-[100] w-full border-b border-border/80 bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-colors duration-300">
@@ -43,7 +45,7 @@ const Navbar = () => {
             <NavigationMenuItem>
               <Link
                 className={navigationMenuTriggerStyle()}
-                to={`${process.env.REACT_APP_LANDING_URL}/Features`}
+                to={`${landingUrl}/Features`}
               >
                 {t("app.navbar.solutions")}
               </Link>
@@ -51,7 +53,7 @@ const Navbar = () => {
             <NavigationMenuItem>
               <Link
                 className={navigationMenuTriggerStyle()}
-                to={`${process.env.REACT_APP_LANDING_URL}/Pricing`}
+                to={`${landingUrl}/Pricing`}
               >
                 {t("app.navbar.plansAndPricing")}
               </Link>
@@ -140,10 +142,10 @@ const Navbar = () => {
       {/* Mobile dropdown */}
       {mobileOpen && (
         <div className="space-y-4 border-t border-border bg-white px-5 py-4 text-black shadow-md transition-colors duration-300 dark:bg-black dark:text-white lg:hidden">
-          <Link className="block" to={`${process.env.REACT_APP_LANDING_URL}/Features`}>
+          <Link className="block" to={`${landingUrl}/Features`}>
             {t("app.navbar.solutions")}
           </Link>
-          <Link className="block" to={`${process.env.REACT_APP_LANDING_URL}/Pricing`}>
+          <Link className="block" to={`${landingUrl}/Pricing`}>
             {t("app.navbar.plansAndPricing")}
           </Link>
           <Link className="block" to="/">

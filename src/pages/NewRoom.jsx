@@ -8,6 +8,7 @@ import { ArrowLeft, Globe, Lock, Video, Check, Palette } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createMeeting } from "../api/roomsApi";
 import { useToast } from "../hooks/use-toast";
+import { getJoinMeetingDisplayPrefix } from "../lib/externalLinks";
 
 export default function NewRoom() {
   const { t } = useTranslation();
@@ -130,7 +131,7 @@ export default function NewRoom() {
               <label className="text-sm font-semibold text-foreground">{t("rooms.createForm.roomUrl", "Custom URL")}</label>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground bg-black/[0.03] px-3 h-11 flex items-center rounded-xl border border-border/60 text-sm whitespace-nowrap">
-                  {process.env.REACT_APP_BASE_BACKENED_URL ? process.env.REACT_APP_BASE_BACKENED_URL.replace("https://", "").replace("http://", "") + "join/" : "konn3ct.com/join/"}
+                  {getJoinMeetingDisplayPrefix()}
                 </span>
                 <Input 
                   value={url}

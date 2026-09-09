@@ -21,6 +21,7 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useToast } from "../../hooks/use-toast";
+import { normalizeMeetingUrl } from "../../lib/externalLinks";
 
 const fallbackMeeting = {
   id: "sess_1",
@@ -100,7 +101,7 @@ const normalizeSchedule = (schedule) => {
     source.room_name ??
     source.room ??
     fallbackMeeting.roomname;
-  const joinLink =
+  const rawJoinLink =
     schedule?.joinLink ??
     source.roomlink ??
     source.room_link ??
@@ -109,6 +110,7 @@ const normalizeSchedule = (schedule) => {
     source.meeting_url ??
     source.url ??
     "";
+  const joinLink = normalizeMeetingUrl(rawJoinLink, source.room?.url ?? source.room_url ?? source.roomname);
 
   return {
     raw: source,

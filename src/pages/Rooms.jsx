@@ -26,6 +26,7 @@ import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "../components/ui/sheet";
 import { Tooltip as ReactTooltip } from "react-tooltip";
+import { buildRoomJoinUrl } from "../lib/externalLinks";
 
 const SCHEDULE_PANEL_TOP_OFFSET = "80px";
 const ROOM_LOCK_TOOLTIP_ID = "room-lock-tooltip";
@@ -121,7 +122,7 @@ const Rooms = () => {
   };
 
   const handleCopy = (url) => {
-    const meeting_url = `${process.env.REACT_APP_BASE_BACKENED_URL}join/${url}`;
+    const meeting_url = buildRoomJoinUrl(url, roomQuery.data?.room_link);
     if (meeting_url) {
       navigator.clipboard.writeText(meeting_url);
       toast({ description: t("rooms.toasts.linkCopied") });

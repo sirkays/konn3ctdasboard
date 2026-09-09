@@ -21,6 +21,7 @@ import {
   sendReminder,
 } from "../../api/eventsApi";
 import { useToast } from "../../hooks/use-toast";
+import { buildEventRegistrationUrl } from "../../lib/externalLinks";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import {
@@ -301,7 +302,9 @@ const EventDetail = () => {
         : 0;
 
   const copyRegistrationLink = async () => {
-    const url = getFirstValue(event, ["event_url", "url", "registration_url", "link"]);
+    const rawUrl = getFirstValue(event, ["event_url", "url", "registration_url", "link"]);
+    const eventRef = getEventReference(event) || reference;
+    const url = buildEventRegistrationUrl(eventRef, rawUrl);
     if (!url) {
       toast({
         description: "No registration link is available for this event.",

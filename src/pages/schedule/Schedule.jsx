@@ -24,6 +24,7 @@ import {
 } from "../../components/ui/pagination";
 import { Skeleton } from "../../components/ui/skeleton";
 import { useToast } from "../../hooks/use-toast";
+import { normalizeMeetingUrl } from "../../lib/externalLinks";
 
 const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const SESSION_COLORS = ["bg-brand-green", "bg-brand-blue", "bg-amber-500", "bg-[#CC505C]"];
@@ -148,7 +149,7 @@ const normalizeMeetings = (data) => {
         description: meeting.description ?? meeting.additional ?? "",
         roomName: meeting.roomname ?? meeting.room_name ?? meeting.room ?? "",
         guestList,
-        joinLink:
+        joinLink: normalizeMeetingUrl(
           meeting.roomlink ??
           meeting.room_link ??
           meeting.join_link ??
@@ -156,6 +157,8 @@ const normalizeMeetings = (data) => {
           meeting.meeting_url ??
           meeting.url ??
           "",
+          meeting.room ?? meeting.room_name ?? meeting.roomname
+        ),
         raw: meeting,
         type: type.includes("webinar") ? "WEBINAR" : "MEETING",
         attendeeLabel: type.includes("webinar")

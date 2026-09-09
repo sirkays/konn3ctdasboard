@@ -14,6 +14,7 @@ import {
 import { getRooms } from "../../api/roomsApi";
 import { createSchedule, getScheduleRecentEmails, updateSchedule, createWebinarSchedule } from "../../api/scheduleApi";
 import { useToast } from "../../hooks/use-toast";
+import { buildEventRegistrationUrl } from "../../lib/externalLinks";
 import { cn } from "../../lib/utils";
 
 import { Card, CardContent } from "../../components/ui/card";
@@ -353,7 +354,7 @@ export default function NewSchedule() {
 
       const ref = response?.eventReference;
       if (ref) {
-        setEventUrl(`https://www.konn3ct.com/event/${ref}`);
+        setEventUrl(buildEventRegistrationUrl(ref));
         toast({ description: "Webinar scheduled and event page created!" });
         scrollToField("event-success-card");
       } else {
