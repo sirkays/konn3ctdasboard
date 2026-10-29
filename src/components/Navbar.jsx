@@ -36,7 +36,7 @@ const Navbar = () => {
       <div className="flex items-center justify-between px-5 py-3">
         {/* Logo */}
         <Link to="/">
-          <img src={logo} alt={t("app.navbar.logoAlt")} className="h-8" />
+          <img src={logo} alt={t("app.navbar.logoAlt")} className="h-8 w-auto object-contain" />
         </Link>
 
         {/* Desktop menu */}

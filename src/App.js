@@ -130,7 +130,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       <div className={cn("flex h-16 items-center border-b border-border/60", isCollapsed && !isMobileMenuOpen ? "justify-center px-0" : "justify-between px-6")}>
         {(!isCollapsed || isMobileMenuOpen) && (
           <Link to="/" className="flex items-center gap-2.5 group" onClick={() => setIsMobileMenuOpen?.(false)}>
-            <img src={logo} alt={t("app.navbar.logoAlt", "Konn3ct Logo")} className="h-8" />
+            <img src={logo} alt={t("app.navbar.logoAlt", "Konn3ct Logo")} className="h-8 w-auto object-contain" />
           </Link>
         )}
         {isCollapsed && !isMobileMenuOpen && (

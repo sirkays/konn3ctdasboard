@@ -412,7 +412,7 @@ export function RegisterForm() {
   return (
     <div>
       <div className="mb-8">
-        <img src={logo} alt="konn3ct" className="h-10" />
+        <img src={logo} alt="konn3ct" className="h-10 w-auto object-contain" />
       </div>
       <h1 className="text-3xl font-bold tracking-tight text-foreground">
         Create your account
