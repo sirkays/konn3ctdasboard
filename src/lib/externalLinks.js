@@ -230,7 +230,7 @@ export const isBackendUrl = (url) => {
   const baseApi = readEnv(process.env.REACT_APP_BASE_URL).toLowerCase();
   if (baseApi && lower.includes(baseApi.replace(/\/+$/, ""))) return true;
 
-  return /127\.0\.0\.1:8080|localhost:8080/.test(lower);
+  return /127\.0\.0\.1:(8000|8080|8081)|localhost:(8000|8080|8081)/.test(lower);
 };
 
 export const getJoinMeetingBaseUrl = (customBaseUrl) => {

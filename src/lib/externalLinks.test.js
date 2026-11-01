@@ -76,10 +76,13 @@ describe("externalLinks meeting join and event URL helpers", () => {
   });
 
   describe("isBackendUrl", () => {
-    it("detects 127.0.0.1:8080 and localhost:8080", () => {
+    it("detects 127.0.0.1 and localhost on local backend ports (8000, 8080, 8081)", () => {
       expect(isBackendUrl("http://127.0.0.1:8080/join/abc")).toBe(true);
       expect(isBackendUrl("http://localhost:8080/api/app")).toBe(true);
       expect(isBackendUrl("https://127.0.0.1:8080")).toBe(true);
+      expect(isBackendUrl("http://127.0.0.1:8081/join/abc")).toBe(true);
+      expect(isBackendUrl("http://localhost:8081/api/app")).toBe(true);
+      expect(isBackendUrl("http://127.0.0.1:8000/api/app")).toBe(true);
     });
 
     it("detects URLs matching REACT_APP_BASE_BACKENED_URL or REACT_APP_BASE_URL", () => {
