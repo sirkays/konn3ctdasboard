@@ -122,8 +122,26 @@ const generateReceipt = (payment, user, toast, t) => {
   win.document.close();
 };
 
-const transformPlans = (data, t) => {
-  const planList = Array.isArray(data?.plan) ? data.plan : [];
+export const isPlanDisabled = (plan) => {
+  const status = String(plan?.status ?? "active").trim().toLowerCase();
+  return status === "inactive" || status === "disabled" || status === "0";
+};
+
+export const isCustomPlanPrice = (value) => {
+  const raw = String(value ?? "").split("/")[0].trim();
+  if (!raw) return false;
+  if (/^custom(?:\s+pricing)?$/i.test(raw)) return true;
+  return Number.isNaN(Number(raw));
+};
+
+export const transformPlans = (data, t) => {
+  const rawPlanList = Array.isArray(data?.plan) ? data.plan : [];
+  const enterpriseExplicitlyDisabled = rawPlanList.some(
+    (plan) =>
+      String(plan?.name ?? "").trim().toLowerCase() === "enterprise" &&
+      isPlanDisabled(plan)
+  );
+  const planList = rawPlanList.filter((plan) => !isPlanDisabled(plan));
   const yes = t("payments.features.yes");
   const no = t("payments.features.no");
 
@@ -138,25 +156,50 @@ const transformPlans = (data, t) => {
     t("payments.features.dialIn", { value: plan.dialin ? yes : no }),
   ];
 
-  const monthlyPlans = planList.map((plan) => ({
-    name: plan.name,
-    price: String(plan?.monthly_cost ?? "0").split("/")[0],
-    target: t("payments.planCard.targetIndividuals"),
-    category: "monthly",
-    features: buildFeatures(plan),
-    cta: plan.name === "basic" ? t("payments.planCard.free") : t("payments.planCard.upgrade"),
-  }));
+  const resolvePriceAndCta = (plan, rawCost) => {
+    const rawPrice = String(rawCost ?? "0").split("/")[0].trim();
+    const lowerName = String(plan?.name ?? "").trim().toLowerCase();
+    const isFree = lowerName === "basic" || lowerName === "free";
 
-  const yearlyPlans = planList.map((plan) => ({
-    name: plan.name,
-    price: String(plan?.yearly_cost ?? "0").split("/")[0],
-    target: t("payments.planCard.targetIndividuals"),
-    category: "yearly",
-    features: buildFeatures(plan),
-    cta: plan.name === "basic" ? t("payments.planCard.free") : t("payments.planCard.upgrade"),
-  }));
+    if (isCustomPlanPrice(rawPrice)) {
+      return {
+        price: t("payments.planCard.customPrice", "Custom"),
+        cta: t("payments.actions.contactSales", "Contact Sales"),
+      };
+    }
 
-  const hasEnterprise = (arr) => arr.some((p) => String(p.name).toLowerCase() === "enterprise");
+    return {
+      price: rawPrice,
+      cta: isFree ? t("payments.planCard.free") : t("payments.planCard.upgrade"),
+    };
+  };
+
+  const monthlyPlans = planList.map((plan) => {
+    const { price, cta } = resolvePriceAndCta(plan, plan?.monthly_cost);
+    return {
+      name: plan.name,
+      price,
+      target: t("payments.planCard.targetIndividuals"),
+      category: "monthly",
+      features: buildFeatures(plan),
+      cta,
+    };
+  });
+
+  const yearlyPlans = planList.map((plan) => {
+    const { price, cta } = resolvePriceAndCta(plan, plan?.yearly_cost);
+    return {
+      name: plan.name,
+      price,
+      target: t("payments.planCard.targetIndividuals"),
+      category: "yearly",
+      features: buildFeatures(plan),
+      cta,
+    };
+  });
+
+  const hasEnterprise = (arr) =>
+    arr.some((p) => String(p.name).trim().toLowerCase() === "enterprise");
 
   const enterprisePlan = {
     name: "enterprise",
@@ -166,10 +209,10 @@ const transformPlans = (data, t) => {
     cta: t("payments.actions.contactSales"),
   };
 
-  if (!hasEnterprise(monthlyPlans)) {
+  if (!enterpriseExplicitlyDisabled && !hasEnterprise(monthlyPlans)) {
     monthlyPlans.push({ ...enterprisePlan, category: "monthly" });
   }
-  if (!hasEnterprise(yearlyPlans)) {
+  if (!enterpriseExplicitlyDisabled && !hasEnterprise(yearlyPlans)) {
     yearlyPlans.push({ ...enterprisePlan, category: "yearly" });
   }
 
@@ -379,10 +422,12 @@ const Payments = () => {
 export default Payments;
 
 const PlanCard = ({ plan, currentPlanName, paystackBaseProps }) => {
-  const { color, icon: Icon, popular } = getPlanStyles(plan.name);
+  const isCustomPrice = isCustomPlanPrice(plan.price);
+  const { color, icon: Icon, popular } = getPlanStyles(
+    isCustomPrice ? `${plan.name} custom` : plan.name
+  );
   const isCurrent = currentPlanName.toLowerCase() === plan.name.toLowerCase();
   
-  const isCustomPrice = isNaN(Number(plan.price));
   const fullPaystackProps = isCustomPrice ? undefined : {
     ...paystackBaseProps,
     amount: Number(plan.price) * 100,
