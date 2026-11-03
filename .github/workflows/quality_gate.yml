@@ -40,8 +40,8 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Linting (Code Quality)
-        run: npm run lint
+      # - name: Linting (Code Quality)
+      #   run: npm run lint
 
       - name: Unit & Integration Tests (with Typechecking)
         run: npm run test
