@@ -1,15 +1,21 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import React from "react";
-import { Check, Crown, Zap, Shield, ArrowRight, FileText } from "lucide-react";
-import { getList, getPlans } from "../api/plansApi";
+import React, { useEffect, useRef, useState } from "react";
+import { Check, Crown, Zap, Shield, ArrowRight, FileText, Loader2 } from "lucide-react";
+import {
+  getList,
+  getPlans,
+  initializeCheckout,
+  openPaystackPopup,
+  preloadPaystackInline,
+  verifyCheckout,
+} from "../api/plansApi";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { TabsContent } from "@radix-ui/react-tabs";
 import { capitalize } from "../lib/utils";
 import { getUser } from "../api/userApi";
 import { useToast } from "../hooks/use-toast";
-import { PaystackButton } from "react-paystack";
 import { format } from "date-fns";
 import { contactSalesUrl } from "../lib/externalLinks";
 import { useTranslation } from "react-i18next";
@@ -177,6 +183,7 @@ export const transformPlans = (data, t) => {
   const monthlyPlans = planList.map((plan) => {
     const { price, cta } = resolvePriceAndCta(plan, plan?.monthly_cost);
     return {
+      ...(plan.id !== undefined ? { id: plan.id } : {}),
       name: plan.name,
       price,
       target: t("payments.planCard.targetIndividuals"),
@@ -189,6 +196,7 @@ export const transformPlans = (data, t) => {
   const yearlyPlans = planList.map((plan) => {
     const { price, cta } = resolvePriceAndCta(plan, plan?.yearly_cost);
     return {
+      ...(plan.id !== undefined ? { id: plan.id } : {}),
       name: plan.name,
       price,
       target: t("payments.planCard.targetIndividuals"),
@@ -219,6 +227,92 @@ export const transformPlans = (data, t) => {
   return { monthly: monthlyPlans, yearly: yearlyPlans };
 };
 
+export const invalidateBillingQueries = async (queryClient) => {
+  if (!queryClient) return;
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["profile-dashboard"] }),
+    queryClient.invalidateQueries({ queryKey: ["profile"] }),
+    queryClient.invalidateQueries({ queryKey: ["payments"] }),
+    queryClient.invalidateQueries({ queryKey: ["plans"] }),
+    queryClient.invalidateQueries({ queryKey: ["addons"] }),
+  ]);
+};
+
+export const runPlanCheckoutFlow = async ({
+  plan,
+  initializeCheckoutFn = initializeCheckout,
+  openPaystackPopupFn = openPaystackPopup,
+  verifyCheckoutFn = verifyCheckout,
+  queryClient,
+  toast,
+  t,
+  onStart,
+  onFinish,
+}) => {
+  try {
+    if (onStart) onStart();
+    const session = await initializeCheckoutFn({
+      item_type: "plan",
+      ...(plan.id ? { plan_id: Number(plan.id) } : {}),
+      plan_name: plan.name,
+      billing_cycle: plan.category === "yearly" ? "yearly" : "monthly",
+      currency: "NGN",
+      provider: "paystack",
+    });
+
+    const localReference = session?.local_reference;
+
+    await openPaystackPopupFn({
+      accessCode: session?.access_code,
+      paymentUrl: session?.payment_url,
+      onSuccess: async (tx) => {
+        try {
+          const refToVerify = localReference || tx?.reference || tx?.trxref;
+          if (refToVerify) {
+            await verifyCheckoutFn(refToVerify);
+          }
+          await invalidateBillingQueries(queryClient);
+          toast({
+            description: t("payments.toasts.purchaseSuccessful", "Purchase successful! Your subscription is now active."),
+          });
+        } catch (verifyError) {
+          await invalidateBillingQueries(queryClient);
+          toast({
+            description:
+              verifyError?.response?.data?.message ||
+              t("payments.toasts.purchaseSuccessful", "Payment received. Refreshing subscription status..."),
+          });
+        } finally {
+          if (onFinish) onFinish();
+        }
+      },
+      onCancel: () => {
+        if (onFinish) onFinish();
+        toast({ description: t("payments.toasts.paymentCancelled", "Payment cancelled.") });
+      },
+      onError: (err) => {
+        if (onFinish) onFinish();
+        toast({
+          description:
+            err?.response?.data?.message ||
+            err?.message ||
+            t("payments.states.loadErrorDescription", "Unable to complete payment."),
+          variant: "destructive",
+        });
+      },
+    });
+  } catch (error) {
+    if (onFinish) onFinish();
+    toast({
+      description:
+        error?.response?.data?.message ||
+        error?.message ||
+        t("payments.states.loadErrorDescription", "Unable to initialize payment."),
+      variant: "destructive",
+    });
+  }
+};
+
 const formatPaymentDate = (value) => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : format(parsed, "PPP");
@@ -239,6 +333,9 @@ const getPlanStyles = (planName) => {
 const Payments = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [processingPlanKey, setProcessingPlanKey] = useState(null);
+  const verifiedCallbackRef = useRef(false);
 
   const { data: plansData, isLoading: plansLoading, isError: plansError } = useQuery({
     queryKey: ["plans"],
@@ -255,6 +352,33 @@ const Payments = () => {
     queryKey: ["payments"],
     queryFn: getList,
   });
+
+  useEffect(() => {
+    preloadPaystackInline().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (verifiedCallbackRef.current || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const callbackRef = params.get("reference") || params.get("trxref");
+    if (!callbackRef) return;
+
+    verifiedCallbackRef.current = true;
+    params.delete("reference");
+    params.delete("trxref");
+    const newQuery = params.toString();
+    const cleanUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    verifyCheckout(callbackRef)
+      .then(async () => {
+        await invalidateBillingQueries(queryClient);
+        toast({ description: t("payments.toasts.purchaseSuccessful", "Purchase successful!") });
+      })
+      .catch(async () => {
+        await invalidateBillingQueries(queryClient);
+      });
+  }, [queryClient, t, toast]);
 
   if (plansLoading || userLoading || paymentsLoading) {
     return (
@@ -282,21 +406,23 @@ const Payments = () => {
 
   const currentPlanName = userData?.user_plan?.name || "Basic";
   const { icon: PlanIcon } = getPlanStyles(currentPlanName);
-  
+
   const paymentRows = Array.isArray(paymentData?.payments?.data) ? paymentData.payments.data : [];
   const profileUser = userData?.user ?? {};
-  const email = profileUser.email ?? "";
-  const lastName = profileUser.lastName ?? profileUser.lastname ?? "";
-  const phone = profileUser.phone ?? "";
-  const publicKey = process.env.REACT_APP_PAYSTACK_KEY;
+  const rawUserStatus = String(profileUser.status ?? "active").trim().toLowerCase();
+  const isFreePlan = ["basic", "free"].includes(currentPlanName.toLowerCase());
+  const isSubscriptionActive = isFreePlan || rawUserStatus === "active";
 
-  const paystackBaseProps = {
-    email,
-    metadata: { name: lastName, phone },
-    publicKey,
-    text: t("payments.actions.payNow"),
-    onSuccess: () => toast({ description: t("payments.toasts.purchaseSuccessful") }),
-    onClose: () => toast({ description: t("payments.toasts.paymentCancelled") }),
+  const handlePlanCheckout = (plan) => {
+    const planKey = `${plan.category}-${plan.id ?? plan.name}`;
+    runPlanCheckoutFlow({
+      plan,
+      queryClient,
+      toast,
+      t,
+      onStart: () => setProcessingPlanKey(planKey),
+      onFinish: () => setProcessingPlanKey(null),
+    });
   };
 
   return (
@@ -317,7 +443,17 @@ const Payments = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-foreground">{capitalize(currentPlanName)} Plan</h2>
-                <span className="px-2 py-0.5 rounded-md bg-brand-green/10 text-brand-green text-[11px] font-bold uppercase">{t("payments.currentPlan", "Active")}</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-bold uppercase ${
+                    isSubscriptionActive
+                      ? "bg-brand-green/10 text-brand-green"
+                      : "bg-amber-500/10 text-amber-600"
+                  }`}
+                >
+                  {isSubscriptionActive
+                    ? t("payments.currentPlan", "Active")
+                    : capitalize(rawUserStatus || "Inactive")}
+                </span>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">{profileUser.email}</p>
             </div>
@@ -343,25 +479,37 @@ const Payments = () => {
           </TabsList>
 
           <TabsContent value="monthly" className="grid gap-5 md:grid-cols-3">
-            {plansData?.monthly.map((plan, i) => (
-              <PlanCard 
-                key={i} 
-                plan={plan} 
-                currentPlanName={currentPlanName}
-                paystackBaseProps={paystackBaseProps}
-              />
-            ))}
+            {plansData?.monthly.map((plan, i) => {
+              const planKey = `${plan.category}-${plan.id ?? plan.name}`;
+              return (
+                <PlanCard
+                  key={planKey || i}
+                  plan={plan}
+                  currentPlanName={currentPlanName}
+                  isSubscriptionActive={isSubscriptionActive}
+                  isProcessing={processingPlanKey === planKey}
+                  onCheckout={handlePlanCheckout}
+                  t={t}
+                />
+              );
+            })}
           </TabsContent>
 
           <TabsContent value="yearly" className="grid gap-5 md:grid-cols-3">
-            {plansData?.yearly.map((plan, i) => (
-              <PlanCard 
-                key={i} 
-                plan={plan} 
-                currentPlanName={currentPlanName}
-                paystackBaseProps={paystackBaseProps}
-              />
-            ))}
+            {plansData?.yearly.map((plan, i) => {
+              const planKey = `${plan.category}-${plan.id ?? plan.name}`;
+              return (
+                <PlanCard
+                  key={planKey || i}
+                  plan={plan}
+                  currentPlanName={currentPlanName}
+                  isSubscriptionActive={isSubscriptionActive}
+                  isProcessing={processingPlanKey === planKey}
+                  onCheckout={handlePlanCheckout}
+                  t={t}
+                />
+              );
+            })}
           </TabsContent>
         </Tabs>
       </div>
@@ -379,7 +527,7 @@ const Payments = () => {
               <div className="text-right">{t("payments.table.action")}</div>
             </div>
             
-            {paymentRows.map((row, i) => (
+            {paymentRows.map((row) => (
               <div key={row.reference} className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4 items-center px-6 py-4 border-b border-border/30 last:border-b-0 hover:bg-black/[0.015] transition-colors">
                 <span className="text-sm font-medium text-foreground">{formatPaymentDate(row.date) || t("payments.states.notAvailable")}</span>
                 <span className="text-sm text-muted-foreground">{row.plan_details?.name?.toUpperCase()}</span>
@@ -421,26 +569,13 @@ const Payments = () => {
 
 export default Payments;
 
-const PlanCard = ({ plan, currentPlanName, paystackBaseProps }) => {
+const PlanCard = ({ plan, currentPlanName, isSubscriptionActive, isProcessing, onCheckout, t }) => {
   const isCustomPrice = isCustomPlanPrice(plan.price);
   const { color, icon: Icon, popular } = getPlanStyles(
     isCustomPrice ? `${plan.name} custom` : plan.name
   );
-  const isCurrent = currentPlanName.toLowerCase() === plan.name.toLowerCase();
-  
-  const fullPaystackProps = isCustomPrice ? undefined : {
-    ...paystackBaseProps,
-    amount: Number(plan.price) * 100,
-    metadata: {
-      ...paystackBaseProps.metadata,
-      custom_fields: [
-        { display_name: "paymenttype", variable_name: "paymenttype", value: "subscription" },
-        { display_name: "plantype", variable_name: "plantype", value: plan.category },
-        { display_name: "planname", variable_name: "planname", value: plan.name },
-        { display_name: "planprice", variable_name: "planprice", value: plan.price },
-      ],
-    },
-  };
+  const isCurrent = isSubscriptionActive && currentPlanName.toLowerCase() === plan.name.toLowerCase();
+  const isZeroPrice = !isCustomPrice && Number(plan.price) <= 0;
 
   return (
     <Card className={`rounded-2xl ${color} bg-surface overflow-hidden relative h-full flex flex-col ${popular ? "shadow-lg shadow-brand-green/10" : ""}`}>
@@ -485,13 +620,25 @@ const PlanCard = ({ plan, currentPlanName, paystackBaseProps }) => {
             <Button disabled className="w-full h-11 rounded-xl font-semibold opacity-60">
               Current Plan
             </Button>
-          ) : fullPaystackProps ? (
-            <div className="w-full">
-              <PaystackButton
-                className="main-action-button w-full h-11 rounded-xl font-semibold inline-flex items-center justify-center text-sm"
-                {...fullPaystackProps}
-              />
-            </div>
+          ) : isZeroPrice ? (
+            <Button disabled className="w-full h-11 rounded-xl font-semibold opacity-60">
+              {plan.cta}
+            </Button>
+          ) : !isCustomPrice ? (
+            <Button
+              disabled={isProcessing}
+              className="main-action-button w-full h-11 rounded-xl font-semibold inline-flex items-center justify-center text-sm"
+              onClick={() => onCheckout?.(plan)}
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t ? t("payments.actions.processing", "Processing...") : "Processing..."}
+                </>
+              ) : (
+                t ? t("payments.actions.payNow", "Pay Now") : "Pay Now"
+              )}
+            </Button>
           ) : (
             <Button
               className="main-action-button w-full h-11 rounded-xl font-semibold"

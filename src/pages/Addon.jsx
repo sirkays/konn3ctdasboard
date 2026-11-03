@@ -1,16 +1,23 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { PaystackButton } from "react-paystack";
+import React, { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Layers } from "lucide-react";
+import { Layers, Loader2 } from "lucide-react";
 
 import { getAddons } from "../api/addonsApi";
+import {
+  initializeCheckout,
+  openPaystackPopup,
+  preloadPaystackInline,
+  verifyCheckout,
+} from "../api/plansApi";
 import { getUser } from "../api/userApi";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
 import { useToast } from "../hooks/use-toast";
 import { cn } from "../lib/utils";
+import { invalidateBillingQueries } from "./Payments";
 
 const getStatusLabel = (status, t) => {
   switch (status) {
@@ -39,15 +46,89 @@ const getStatusLabel = (status, t) => {
   }
 };
 
+export const runAddonCheckoutFlow = async ({
+  addonId,
+  initializeCheckoutFn = initializeCheckout,
+  openPaystackPopupFn = openPaystackPopup,
+  verifyCheckoutFn = verifyCheckout,
+  queryClient,
+  toast,
+  t,
+  onStart,
+  onFinish,
+}) => {
+  try {
+    if (onStart) onStart();
+    const session = await initializeCheckoutFn({
+      item_type: "addon",
+      addon_id: Number(addonId),
+      currency: "NGN",
+      provider: "paystack",
+    });
+
+    const localReference = session?.local_reference;
+
+    await openPaystackPopupFn({
+      accessCode: session?.access_code,
+      paymentUrl: session?.payment_url,
+      onSuccess: async (tx) => {
+        try {
+          const refToVerify = localReference || tx?.reference || tx?.trxref;
+          if (refToVerify) {
+            await verifyCheckoutFn(refToVerify);
+          }
+          await invalidateBillingQueries(queryClient);
+          toast({ description: t("addons.toasts.purchaseSuccessful", "Addon purchased successfully!") });
+        } catch (verifyError) {
+          await invalidateBillingQueries(queryClient);
+          toast({
+            description:
+              verifyError?.response?.data?.message ||
+              t("addons.toasts.purchaseSuccessful", "Payment received. Updating addon status..."),
+          });
+        } finally {
+          if (onFinish) onFinish();
+        }
+      },
+      onCancel: () => {
+        if (onFinish) onFinish();
+        toast({ description: t("addons.toasts.paymentCancelled", "Payment cancelled.") });
+      },
+      onError: (err) => {
+        if (onFinish) onFinish();
+        toast({
+          description:
+            err?.response?.data?.message ||
+            err?.message ||
+            t("addons.states.loadErrorDescription", "Unable to complete payment."),
+          variant: "destructive",
+        });
+      },
+    });
+  } catch (error) {
+    if (onFinish) onFinish();
+    toast({
+      description:
+        error?.response?.data?.message ||
+        error?.message ||
+        t("addons.states.loadErrorDescription", "Unable to initialize addon checkout."),
+      variant: "destructive",
+    });
+  }
+};
+
 const Addon = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  
+  const queryClient = useQueryClient();
+  const [processingAddonId, setProcessingAddonId] = useState(null);
+  const verifiedCallbackRef = useRef(false);
+
   const { data, isSuccess, isError } = useQuery({
     queryFn: getAddons,
     queryKey: ["addons"],
   });
-  
+
   const {
     data: userData,
     isSuccess: userIsSuccess,
@@ -57,7 +138,32 @@ const Addon = () => {
     queryFn: getUser,
   });
 
-  const publicKey = process.env.REACT_APP_PAYSTACK_KEY;
+  useEffect(() => {
+    preloadPaystackInline().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (verifiedCallbackRef.current || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const callbackRef = params.get("reference") || params.get("trxref");
+    if (!callbackRef) return;
+
+    verifiedCallbackRef.current = true;
+    params.delete("reference");
+    params.delete("trxref");
+    const newQuery = params.toString();
+    const cleanUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ""}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+
+    verifyCheckout(callbackRef)
+      .then(async () => {
+        await invalidateBillingQueries(queryClient);
+        toast({ description: t("addons.toasts.purchaseSuccessful", "Addon purchased successfully!") });
+      })
+      .catch(async () => {
+        await invalidateBillingQueries(queryClient);
+      });
+  }, [queryClient, t, toast]);
 
   if (isError || userIsError) {
     return (
@@ -87,10 +193,17 @@ const Addon = () => {
 
   const addons = Array.isArray(data?.data) ? data.data : [];
   const addonStatus = data?.current_status ?? {};
-  const user = userData?.user ?? {};
-  const email = user.email ?? "";
-  const lastName = user.lastName ?? user.lastname ?? "";
-  const phone = user.phone ?? "";
+
+  const handleAddonPurchase = (addonId) => {
+    runAddonCheckoutFlow({
+      addonId,
+      queryClient,
+      toast,
+      t,
+      onStart: () => setProcessingAddonId(addonId),
+      onFinish: () => setProcessingAddonId(null),
+    });
+  };
 
   return (
     <div className="flex flex-col gap-8 pb-10 px-4 sm:px-6 lg:px-[33px] animate-in fade-in duration-500">
@@ -102,29 +215,11 @@ const Addon = () => {
 
       {/* Addons Grid */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {addons.map(({ name, description, price, id }, index) => {
+        {addons.map(({ name, description, price, id }) => {
           const statusValue = addonStatus["addon" + id];
           const normalizedStatus = typeof statusValue === "string" ? statusValue.trim().toLowerCase() : "";
           const isActive = normalizedStatus === "active";
-
-          const componentProps = {
-            email,
-            amount: price * 100,
-            metadata: {
-              name: lastName,
-              phone,
-              custom_fields: [
-                { display_name: "paymenttype", variable_name: "paymenttype", value: "addons" },
-                { display_name: "addonid", variable_name: "addonid", value: id },
-                { display_name: "addonname", variable_name: "addonname", value: name },
-                { display_name: "addonprice", variable_name: "addonprice", value: price },
-              ],
-            },
-            publicKey,
-            text: t("addons.actions.payNow"),
-            onSuccess: () => toast({ description: t("addons.toasts.purchaseSuccessful") }),
-            onClose: () => toast({ description: t("addons.toasts.paymentCancelled") }),
-          };
+          const isProcessing = processingAddonId === id;
 
           const colorTheme = isActive ? "brand-green" : "brand-blue";
 
@@ -136,14 +231,14 @@ const Addon = () => {
                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-${colorTheme}/10 text-${colorTheme} shrink-0`}>
                     <Layers className="h-6 w-6" />
                   </div>
-                  <Badge 
-                    variant={isActive ? "default" : "secondary"} 
+                  <Badge
+                    variant={isActive ? "default" : "secondary"}
                     className={cn("px-2.5 py-0.5 text-xs font-bold rounded-md uppercase tracking-wider", isActive ? "bg-brand-green/10 text-brand-green hover:bg-brand-green/20" : "")}
                   >
                     {statusValue ? getStatusLabel(normalizedStatus, t) : t("addons.status.unknown")}
                   </Badge>
                 </div>
-                
+
                 <h3 className="text-xl font-bold text-foreground mb-2">{name}</h3>
                 <p className="text-sm text-muted-foreground flex-1 mb-6 leading-relaxed">
                   {description}
@@ -151,16 +246,26 @@ const Addon = () => {
 
                 <div className="mb-6">
                   <span className="text-4xl font-extrabold text-foreground">
-                    NGN {new Intl.NumberFormat('en-NG').format(price)}
+                    NGN {new Intl.NumberFormat("en-NG").format(price)}
                   </span>
                 </div>
 
                 <div className="mt-auto">
                   <div className="w-full">
-                    <PaystackButton
+                    <Button
+                      disabled={isProcessing}
                       className="main-action-button w-full h-11 rounded-xl font-semibold inline-flex items-center justify-center text-sm"
-                      {...componentProps}
-                    />
+                      onClick={() => handleAddonPurchase(id)}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t("addons.actions.processing", "Processing...")}
+                        </>
+                      ) : (
+                        t("addons.actions.payNow", "Pay Now")
+                      )}
+                    </Button>
                   </div>
                 </div>
               </CardContent>
