@@ -41,13 +41,13 @@ import CardIcon from "./assets/components/CardIcon";
 import RecordIcon from "./assets/components/RecordIcon";
 import VideoIcon from "./assets/components/VideoIcon";
 import StreamIcon from "./assets/components/StreamIcon";
-import AddonIcon from "./assets/components/AddonIcon";
+// import AddonIcon from "./assets/components/AddonIcon";
 import RefereeIcon from "./assets/components/RefereeIcon";
 import DonationIcon from "./assets/components/DonationIcon";
 import SettingsIcon from "./assets/components/SettingsIcon";
 import AttendanceIcon from "./assets/components/AttendanceIcon";
 import UserIcon from "./assets/components/UserIcon";
-import Notifications from "./pages/Notifications";
+import Notifications, { NotificationsProvider, useNotifications } from "./pages/Notifications";
 import ApiTokens from "./pages/ApiTokens";
 import { ForgotPassword } from "./pages/auth/ForgotPassword";
 import { RouteErrorFallback } from "./components/ui/resilience";
@@ -97,7 +97,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
       icon: RecordIcon,
     },
     { titleKey: "app.sidebar.payments", url: "/payments", icon: CardIcon },
-    { titleKey: "app.sidebar.addons", url: "/addons", icon: AddonIcon },
+    // { titleKey: "app.sidebar.addons", url: "/addons", icon: AddonIcon },
     { titleKey: "app.sidebar.referees", url: "/referees", icon: RefereeIcon },
     {
       titleKey: "app.sidebar.donations",
@@ -202,10 +202,11 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
   );
 }
 
-function DashboardTopbar({ onMenuClick }) {
+export function DashboardTopbar({ onMenuClick }) {
   const { theme, setTheme } = useContext(ThemeContext);
   const { t } = useTranslation();
   const { user: authUser, logout } = useAuth();
+  const { unreadCount, hasUnread } = useNotifications();
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: getUser,
@@ -261,10 +262,17 @@ function DashboardTopbar({ onMenuClick }) {
         {/* Notifications */}
         <Link 
           to="/notifications"
+          aria-label={t("notifications.title", "Notifications")}
           className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-black/[0.04] text-muted-foreground hover:text-foreground transition-colors"
         >
           <Bell className="h-[18px] w-[18px]" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-green ring-2 ring-surface" />
+          {hasUnread && (
+            <span
+              data-testid="topbar-notification-badge"
+              aria-label={`${unreadCount} unread notifications`}
+              className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-green ring-2 ring-surface"
+            />
+          )}
         </Link>
 
         {/* Separator */}
@@ -317,31 +325,33 @@ const AuthenticatedAppLayout = () => {
 
   return (
     <IsAuthenticated>
-      <div className="flex h-screen w-full flex-col bg-muted/20">
-        <div className="flex flex-1 overflow-hidden relative">
-          <AppSidebar 
-            isMobileMenuOpen={isMobileMenuOpen} 
-            setIsMobileMenuOpen={setIsMobileMenuOpen} 
-            isCollapsed={isSidebarCollapsed}
-            setIsCollapsed={setIsSidebarCollapsed}
-          />
-          
-          {/* Mobile backdrop */}
-          {isMobileMenuOpen && (
-            <div 
-              className="fixed inset-0 bg-black/50 z-30 md:hidden"
-              onClick={() => setIsMobileMenuOpen(false)}
+      <NotificationsProvider>
+        <div className="flex h-screen w-full flex-col bg-muted/20">
+          <div className="flex flex-1 overflow-hidden relative">
+            <AppSidebar 
+              isMobileMenuOpen={isMobileMenuOpen} 
+              setIsMobileMenuOpen={setIsMobileMenuOpen} 
+              isCollapsed={isSidebarCollapsed}
+              setIsCollapsed={setIsSidebarCollapsed}
             />
-          )}
+            
+            {/* Mobile backdrop */}
+            {isMobileMenuOpen && (
+              <div 
+                className="fixed inset-0 bg-black/50 z-30 md:hidden"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
+            )}
 
-          <div className="flex flex-1 flex-col overflow-hidden w-full">
-            <DashboardTopbar onMenuClick={() => setIsMobileMenuOpen(true)} />
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/20">
-              <Outlet />
-            </main>
+            <div className="flex flex-1 flex-col overflow-hidden w-full">
+              <DashboardTopbar onMenuClick={() => setIsMobileMenuOpen(true)} />
+              <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 bg-muted/20">
+                <Outlet />
+              </main>
+            </div>
           </div>
         </div>
-      </div>
+      </NotificationsProvider>
     </IsAuthenticated>
   );
 };

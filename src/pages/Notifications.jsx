@@ -5,7 +5,7 @@ import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 
 // Mock data for notifications since no backend connection is required
-const mockNotifications = [
+export const mockNotifications = [
   {
     id: 1,
     title: "New Meeting Scheduled",
@@ -53,17 +53,136 @@ const mockNotifications = [
   }
 ];
 
+const cloneNotifications = (items = []) =>
+  Array.isArray(items) ? items.map((item) => ({ ...item })) : [];
+
+export const getUnreadCount = (notifications = []) =>
+  Array.isArray(notifications)
+    ? notifications.filter((notification) => Boolean(notification?.isUnread)).length
+    : 0;
+
+export const hasUnreadNotifications = (notifications = []) =>
+  getUnreadCount(notifications) > 0;
+
+export const markAllNotificationsAsRead = (notifications = []) =>
+  Array.isArray(notifications)
+    ? notifications.map((notification) => ({ ...notification, isUnread: false }))
+    : [];
+
+export const removeNotificationById = (notifications = [], id) =>
+  Array.isArray(notifications)
+    ? notifications.filter((notification) => notification.id !== id)
+    : [];
+
+export const createNotificationsStore = (initialNotifications = mockNotifications) => {
+  let notifications = cloneNotifications(initialNotifications);
+  const listeners = new Set();
+
+  const buildSnapshot = () => {
+    const unreadCount = getUnreadCount(notifications);
+    return {
+      notifications,
+      unreadCount,
+      hasUnread: unreadCount > 0,
+    };
+  };
+
+  let snapshot = buildSnapshot();
+
+  const emitChange = () => {
+    snapshot = buildSnapshot();
+    listeners.forEach((listener) => listener(snapshot));
+  };
+
+  return {
+    getState: () => snapshot,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    setNotifications: (updater) => {
+      const next =
+        typeof updater === "function" ? updater(notifications) : updater;
+      notifications = cloneNotifications(next);
+      emitChange();
+    },
+    markAllAsRead: () => {
+      notifications = markAllNotificationsAsRead(notifications);
+      emitChange();
+    },
+    markAsRead: (id) => {
+      notifications = notifications.map((notification) =>
+        notification.id === id ? { ...notification, isUnread: false } : notification
+      );
+      emitChange();
+    },
+    removeNotification: (id) => {
+      notifications = removeNotificationById(notifications, id);
+      emitChange();
+    },
+    resetNotifications: (nextNotifications = initialNotifications) => {
+      notifications = cloneNotifications(nextNotifications);
+      emitChange();
+    },
+  };
+};
+
+const defaultNotificationsStore = createNotificationsStore(mockNotifications);
+
+export const resetNotificationsStore = (nextNotifications = mockNotifications) => {
+  defaultNotificationsStore.resetNotifications(nextNotifications);
+};
+
+export const NotificationsContext = React.createContext(null);
+
+export const NotificationsProvider = ({ children, initialNotifications }) => {
+  const storeRef = React.useRef(null);
+
+  if (!storeRef.current) {
+    storeRef.current =
+      initialNotifications !== undefined
+        ? createNotificationsStore(initialNotifications)
+        : defaultNotificationsStore;
+  }
+
+  return (
+    <NotificationsContext.Provider value={storeRef.current}>
+      {children}
+    </NotificationsContext.Provider>
+  );
+};
+
+export const useNotifications = () => {
+  const contextStore = React.useContext(NotificationsContext);
+  const store = contextStore || defaultNotificationsStore;
+  const [state, setState] = React.useState(() => store.getState());
+
+  React.useEffect(() => {
+    setState(store.getState());
+    return store.subscribe(setState);
+  }, [store]);
+
+  return {
+    notifications: state.notifications,
+    unreadCount: state.unreadCount,
+    hasUnread: state.hasUnread,
+    markAllAsRead: store.markAllAsRead,
+    markAsRead: store.markAsRead,
+    removeNotification: store.removeNotification,
+    setNotifications: store.setNotifications,
+    resetNotifications: store.resetNotifications,
+  };
+};
+
 const Notifications = () => {
   const { t } = useTranslation();
-  const [notifications, setNotifications] = React.useState(mockNotifications);
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isUnread: false })));
-  };
-
-  const removeNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
+  const {
+    notifications,
+    unreadCount,
+    hasUnread,
+    markAllAsRead,
+    removeNotification,
+  } = useNotifications();
 
   const getIconColor = (type) => {
     switch (type) {
@@ -74,17 +193,29 @@ const Notifications = () => {
     }
   };
 
-  const unreadCount = notifications.filter(n => n.isUnread).length;
-
   return (
     <div className="w-full flex-1 p-4 md:p-6 lg:p-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-foreground flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green/10 text-brand-green">
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-green/10 text-brand-green">
               <Bell className="h-6 w-6" />
+              {hasUnread && (
+                <span
+                  data-testid="notifications-page-unread-dot"
+                  className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-brand-green ring-2 ring-surface"
+                />
+              )}
             </div>
-            {t("notifications.title", "Notifications")}
+            <span>{t("notifications.title", "Notifications")}</span>
+            {unreadCount > 0 && (
+              <span
+                data-testid="notifications-unread-badge"
+                className="inline-flex items-center justify-center rounded-full bg-brand-green/10 px-2.5 py-0.5 text-xs font-semibold text-brand-green"
+              >
+                {unreadCount}
+              </span>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-xl">
             {t("notifications.subtitle", "Stay updated with your latest meeting alerts, system announcements, and account activities.")}
@@ -123,7 +254,10 @@ const Notifications = () => {
               )}
             >
               {notification.isUnread && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-brand-green rounded-r-full" />
+                <div
+                  data-testid={`notification-unread-indicator-${notification.id}`}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-brand-green rounded-r-full"
+                />
               )}
               
               <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl", getIconColor(notification.type))}>
