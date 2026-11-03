@@ -24,6 +24,7 @@ import { Skeleton } from "../components/ui/skeleton";
 const ENGLISH_LOCALE = "en-NG";
 
 export const DEFAULT_BILLING_CYCLE = "yearly";
+export const PAYMENTS_BUILD_TAG = "v2026.11.03-yearly-default";
 
 const generateReceipt = (payment, user, toast, t) => {
   const userLastName = user?.lastname ?? user?.lastName ?? "";
@@ -419,9 +420,19 @@ const Payments = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [billingCycle, setBillingCycle] = useState(DEFAULT_BILLING_CYCLE);
   const [processingPlanKey, setProcessingPlanKey] = useState(null);
   const [activePlanOverride, setActivePlanOverride] = useState(null);
   const verifiedCallbackRef = useRef(false);
+
+  useEffect(() => {
+    console.log(
+      "[Konn3ct Payments] Build deployed:",
+      PAYMENTS_BUILD_TAG,
+      "| Default billing cycle:",
+      DEFAULT_BILLING_CYCLE
+    );
+  }, []);
 
   const { data: plansData, isLoading: plansLoading, isError: plansError } = useQuery({
     queryKey: ["plans"],
@@ -564,7 +575,12 @@ const Payments = () => {
       <div>
         <h2 className="text-xl font-bold text-foreground mb-5">{t("payments.actions.changePlan", "Choose a Plan")}</h2>
         
-        <Tabs defaultValue={DEFAULT_BILLING_CYCLE} className="flex flex-col">
+        <Tabs
+          value={billingCycle}
+          onValueChange={setBillingCycle}
+          defaultValue={DEFAULT_BILLING_CYCLE}
+          className="flex flex-col"
+        >
           <TabsList className="mb-6 self-start grid w-[300px] grid-cols-2 rounded-xl bg-black/[0.04] p-1 h-12">
             <TabsTrigger className="rounded-lg h-full data-[state=active]:bg-surface data-[state=active]:shadow-sm transition-all" value="yearly">
               {t("payments.billingCycle.yearly")}

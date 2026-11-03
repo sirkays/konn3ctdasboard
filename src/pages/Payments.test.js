@@ -3,6 +3,7 @@ import {
   DEFAULT_BILLING_CYCLE,
   isCustomPlanPrice,
   isPlanDisabled,
+  PAYMENTS_BUILD_TAG,
   runPlanCheckoutFlow,
   transformPlans,
 } from "./Payments";
@@ -48,8 +49,9 @@ const mockT = (key, fallbackOrOptions) => {
 };
 
 describe("Payments plan transformation helpers", () => {
-  it("defaults billing cycle tab to yearly", () => {
+  it("defaults billing cycle tab to yearly and exposes build tag", () => {
     expect(DEFAULT_BILLING_CYCLE).toBe("yearly");
+    expect(PAYMENTS_BUILD_TAG).toBe("v2026.11.03-yearly-default");
   });
 
   it("detects disabled plans accurately", () => {
