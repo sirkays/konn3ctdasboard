@@ -23,6 +23,8 @@ import { Skeleton } from "../components/ui/skeleton";
 
 const ENGLISH_LOCALE = "en-NG";
 
+export const DEFAULT_BILLING_CYCLE = "yearly";
+
 const generateReceipt = (payment, user, toast, t) => {
   const userLastName = user?.lastname ?? user?.lastName ?? "";
   const userFirstName = user?.firstname ?? user?.firstName ?? "";
@@ -227,15 +229,60 @@ export const transformPlans = (data, t) => {
   return { monthly: monthlyPlans, yearly: yearlyPlans };
 };
 
+export const applyPlanToProfileCache = (queryClient, plan, verifyResponse) => {
+  if (!queryClient || (!plan && !verifyResponse?.user_plan)) return;
+
+  const verifiedPlan = verifyResponse?.user_plan || {
+    ...(plan?.id ? { id: Number(plan.id) } : {}),
+    ...(plan?.name ? { name: plan.name } : {}),
+  };
+  const verifiedUser = verifyResponse?.user;
+
+  if (typeof queryClient.setQueryData !== "function") return;
+
+  const updateProfileCache = (prev) => {
+    if (!prev || typeof prev !== "object") return prev;
+    return {
+      ...prev,
+      user_plan: {
+        ...(prev.user_plan || {}),
+        ...verifiedPlan,
+        name: verifiedPlan?.name || plan?.name || prev.user_plan?.name,
+      },
+      user: {
+        ...(prev.user || {}),
+        ...(verifiedUser || {}),
+        status: "active",
+        ...(verifiedPlan?.id ? { plan: verifiedPlan.id } : {}),
+      },
+    };
+  };
+
+  queryClient.setQueryData(["profile-dashboard"], updateProfileCache);
+  queryClient.setQueryData(["profile"], updateProfileCache);
+};
+
 export const invalidateBillingQueries = async (queryClient) => {
   if (!queryClient) return;
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ["profile-dashboard"] }),
-    queryClient.invalidateQueries({ queryKey: ["profile"] }),
-    queryClient.invalidateQueries({ queryKey: ["payments"] }),
-    queryClient.invalidateQueries({ queryKey: ["plans"] }),
-    queryClient.invalidateQueries({ queryKey: ["addons"] }),
-  ]);
+  const keys = [
+    ["profile-dashboard"],
+    ["profile"],
+    ["payments"],
+    ["plans"],
+    ["addons"],
+  ];
+
+  await Promise.all(
+    keys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+  );
+
+  if (typeof queryClient.refetchQueries === "function") {
+    await Promise.all(
+      keys.map((queryKey) =>
+        queryClient.refetchQueries({ queryKey, type: "active" })
+      )
+    );
+  }
 };
 
 export const runPlanCheckoutFlow = async ({
@@ -247,6 +294,7 @@ export const runPlanCheckoutFlow = async ({
   toast,
   t,
   onStart,
+  onPlanActivated,
   onFinish,
 }) => {
   try {
@@ -267,10 +315,25 @@ export const runPlanCheckoutFlow = async ({
       paymentUrl: session?.payment_url,
       onSuccess: async (tx) => {
         try {
-          const refToVerify = localReference || tx?.reference || tx?.trxref;
-          if (refToVerify) {
-            await verifyCheckoutFn(refToVerify);
+          applyPlanToProfileCache(queryClient, plan);
+          if (onPlanActivated) {
+            onPlanActivated({ name: plan.name, id: plan.id });
           }
+
+          const refToVerify = localReference || tx?.reference || tx?.trxref;
+          let verifyRes = null;
+          if (refToVerify) {
+            verifyRes = await verifyCheckoutFn(refToVerify);
+          }
+
+          applyPlanToProfileCache(queryClient, plan, verifyRes);
+          if (onPlanActivated) {
+            onPlanActivated({
+              name: verifyRes?.user_plan?.name || plan.name,
+              id: verifyRes?.user_plan?.id || plan.id,
+            });
+          }
+
           await invalidateBillingQueries(queryClient);
           toast({
             description: t("payments.toasts.purchaseSuccessful", "Purchase successful! Your subscription is now active."),
@@ -286,9 +349,31 @@ export const runPlanCheckoutFlow = async ({
           if (onFinish) onFinish();
         }
       },
-      onCancel: () => {
-        if (onFinish) onFinish();
-        toast({ description: t("payments.toasts.paymentCancelled", "Payment cancelled.") });
+      onCancel: async () => {
+        try {
+          if (localReference) {
+            const verifyRes = await verifyCheckoutFn(localReference);
+            if (verifyRes?.status === "paid") {
+              applyPlanToProfileCache(queryClient, plan, verifyRes);
+              if (onPlanActivated) {
+                onPlanActivated({
+                  name: verifyRes?.user_plan?.name || plan.name,
+                  id: verifyRes?.user_plan?.id || plan.id,
+                });
+              }
+              await invalidateBillingQueries(queryClient);
+              toast({
+                description: t("payments.toasts.purchaseSuccessful", "Purchase successful! Your subscription is now active."),
+              });
+              return;
+            }
+          }
+          toast({ description: t("payments.toasts.paymentCancelled", "Payment cancelled.") });
+        } catch {
+          toast({ description: t("payments.toasts.paymentCancelled", "Payment cancelled.") });
+        } finally {
+          if (onFinish) onFinish();
+        }
       },
       onError: (err) => {
         if (onFinish) onFinish();
@@ -335,6 +420,7 @@ const Payments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [processingPlanKey, setProcessingPlanKey] = useState(null);
+  const [activePlanOverride, setActivePlanOverride] = useState(null);
   const verifiedCallbackRef = useRef(false);
 
   const { data: plansData, isLoading: plansLoading, isError: plansError } = useQuery({
@@ -371,7 +457,14 @@ const Payments = () => {
     window.history.replaceState({}, document.title, cleanUrl);
 
     verifyCheckout(callbackRef)
-      .then(async () => {
+      .then(async (verifyRes) => {
+        if (verifyRes?.user_plan) {
+          applyPlanToProfileCache(queryClient, verifyRes.user_plan, verifyRes);
+          setActivePlanOverride({
+            name: verifyRes.user_plan.name,
+            id: verifyRes.user_plan.id,
+          });
+        }
         await invalidateBillingQueries(queryClient);
         toast({ description: t("payments.toasts.purchaseSuccessful", "Purchase successful!") });
       })
@@ -404,14 +497,16 @@ const Payments = () => {
     );
   }
 
-  const currentPlanName = userData?.user_plan?.name || "Basic";
+  const currentPlanName = activePlanOverride?.name || userData?.user_plan?.name || "Basic";
   const { icon: PlanIcon } = getPlanStyles(currentPlanName);
 
   const paymentRows = Array.isArray(paymentData?.payments?.data) ? paymentData.payments.data : [];
   const profileUser = userData?.user ?? {};
-  const rawUserStatus = String(profileUser.status ?? "active").trim().toLowerCase();
+  const rawUserStatus = activePlanOverride
+    ? "active"
+    : String(profileUser.status ?? "active").trim().toLowerCase();
   const isFreePlan = ["basic", "free"].includes(currentPlanName.toLowerCase());
-  const isSubscriptionActive = isFreePlan || rawUserStatus === "active";
+  const isSubscriptionActive = Boolean(activePlanOverride) || isFreePlan || rawUserStatus === "active";
 
   const handlePlanCheckout = (plan) => {
     const planKey = `${plan.category}-${plan.id ?? plan.name}`;
@@ -421,6 +516,7 @@ const Payments = () => {
       toast,
       t,
       onStart: () => setProcessingPlanKey(planKey),
+      onPlanActivated: (activatedPlan) => setActivePlanOverride(activatedPlan),
       onFinish: () => setProcessingPlanKey(null),
     });
   };
@@ -468,18 +564,18 @@ const Payments = () => {
       <div>
         <h2 className="text-xl font-bold text-foreground mb-5">{t("payments.actions.changePlan", "Choose a Plan")}</h2>
         
-        <Tabs defaultValue="monthly" className="flex flex-col">
+        <Tabs defaultValue={DEFAULT_BILLING_CYCLE} className="flex flex-col">
           <TabsList className="mb-6 self-start grid w-[300px] grid-cols-2 rounded-xl bg-black/[0.04] p-1 h-12">
-            <TabsTrigger className="rounded-lg h-full data-[state=active]:bg-surface data-[state=active]:shadow-sm transition-all" value="monthly">
-              {t("payments.billingCycle.monthly")}
-            </TabsTrigger>
             <TabsTrigger className="rounded-lg h-full data-[state=active]:bg-surface data-[state=active]:shadow-sm transition-all" value="yearly">
               {t("payments.billingCycle.yearly")}
             </TabsTrigger>
+            <TabsTrigger className="rounded-lg h-full data-[state=active]:bg-surface data-[state=active]:shadow-sm transition-all" value="monthly">
+              {t("payments.billingCycle.monthly")}
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="monthly" className="grid gap-5 md:grid-cols-3">
-            {plansData?.monthly.map((plan, i) => {
+          <TabsContent value="yearly" className="grid gap-5 md:grid-cols-3">
+            {plansData?.yearly.map((plan, i) => {
               const planKey = `${plan.category}-${plan.id ?? plan.name}`;
               return (
                 <PlanCard
@@ -495,8 +591,8 @@ const Payments = () => {
             })}
           </TabsContent>
 
-          <TabsContent value="yearly" className="grid gap-5 md:grid-cols-3">
-            {plansData?.yearly.map((plan, i) => {
+          <TabsContent value="monthly" className="grid gap-5 md:grid-cols-3">
+            {plansData?.monthly.map((plan, i) => {
               const planKey = `${plan.category}-${plan.id ?? plan.name}`;
               return (
                 <PlanCard

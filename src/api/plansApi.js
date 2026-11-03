@@ -74,11 +74,16 @@ export const verifyCheckout = async (reference) => {
   }
 };
 
+const isPaystackV2Available = () =>
+  typeof window !== "undefined" &&
+  typeof window.PaystackPop === "function" &&
+  typeof window.PaystackPop.prototype?.resumeTransaction === "function";
+
 export const preloadPaystackInline = () => {
   if (typeof window === "undefined") {
     return Promise.resolve(null);
   }
-  if (window.PaystackPop) {
+  if (isPaystackV2Available()) {
     return Promise.resolve(window.PaystackPop);
   }
   if (paystackScriptPromise) {
@@ -88,7 +93,7 @@ export const preloadPaystackInline = () => {
   paystackScriptPromise = new Promise((resolve, reject) => {
     const existing = document.querySelector(`script[src="${PAYSTACK_INLINE_SRC}"]`);
     if (existing) {
-      if (window.PaystackPop) {
+      if (isPaystackV2Available()) {
         resolve(window.PaystackPop);
         return;
       }

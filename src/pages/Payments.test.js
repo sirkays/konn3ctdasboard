@@ -1,4 +1,6 @@
 import {
+  applyPlanToProfileCache,
+  DEFAULT_BILLING_CYCLE,
   isCustomPlanPrice,
   isPlanDisabled,
   runPlanCheckoutFlow,
@@ -46,6 +48,10 @@ const mockT = (key, fallbackOrOptions) => {
 };
 
 describe("Payments plan transformation helpers", () => {
+  it("defaults billing cycle tab to yearly", () => {
+    expect(DEFAULT_BILLING_CYCLE).toBe("yearly");
+  });
+
   it("detects disabled plans accurately", () => {
     expect(isPlanDisabled({ status: "inactive" })).toBe(true);
     expect(isPlanDisabled({ status: "Inactive" })).toBe(true);
@@ -115,7 +121,31 @@ describe("Payments plan transformation helpers", () => {
 });
 
 describe("Backend-driven checkout and verification flows", () => {
-  it("initializes plan checkout on backend, verifies payment on success, and invalidates queries", async () => {
+  it("immediately updates profile cache when applyPlanToProfileCache is called", () => {
+    let dashboardCache = {
+      user_plan: { id: 1, name: "Basic" },
+      user: { id: 10, plan: 1, status: "inactive" },
+    };
+    const queryClient = {
+      setQueryData: jest.fn((key, updater) => {
+        if (key[0] === "profile-dashboard") {
+          dashboardCache = updater(dashboardCache);
+        }
+      }),
+    };
+
+    applyPlanToProfileCache(
+      queryClient,
+      { id: 2, name: "Pro" },
+      { user_plan: { id: 2, name: "Pro" }, user: { id: 10, plan: 2, status: "active" } }
+    );
+
+    expect(dashboardCache.user_plan).toEqual({ id: 2, name: "Pro" });
+    expect(dashboardCache.user.status).toBe("active");
+    expect(dashboardCache.user.plan).toBe(2);
+  });
+
+  it("initializes plan checkout on backend, verifies payment on success, updates active plan immediately, and refetches queries", async () => {
     const initializeCheckoutFn = jest.fn().mockResolvedValue({
       access_code: "ACC_PLAN_123",
       payment_url: "https://checkout.paystack.com/ACC_PLAN_123",
@@ -125,30 +155,36 @@ describe("Backend-driven checkout and verification flows", () => {
       success: true,
       status: "paid",
       reference: "KNT-PLAN-REF-001",
+      user_plan: { id: 2, name: "Pro" },
+      user: { id: 10, plan: 2, status: "active" },
     });
     const openPaystackPopupFn = jest.fn().mockImplementation(async ({ onSuccess }) => {
       await onSuccess({ reference: "KNT-PLAN-REF-001" });
     });
     const queryClient = {
+      setQueryData: jest.fn(),
       invalidateQueries: jest.fn().mockResolvedValue(undefined),
+      refetchQueries: jest.fn().mockResolvedValue(undefined),
     };
     const toast = jest.fn();
+    const onPlanActivated = jest.fn();
 
     await runPlanCheckoutFlow({
-      plan: { id: 2, name: "Pro", category: "monthly", price: "7000" },
+      plan: { id: 2, name: "Pro", category: "yearly", price: "70000" },
       initializeCheckoutFn,
       openPaystackPopupFn,
       verifyCheckoutFn,
       queryClient,
       toast,
       t: mockT,
+      onPlanActivated,
     });
 
     expect(initializeCheckoutFn).toHaveBeenCalledWith({
       item_type: "plan",
       plan_id: 2,
       plan_name: "Pro",
-      billing_cycle: "monthly",
+      billing_cycle: "yearly",
       currency: "NGN",
       provider: "paystack",
     });
@@ -159,8 +195,17 @@ describe("Backend-driven checkout and verification flows", () => {
       })
     );
     expect(verifyCheckoutFn).toHaveBeenCalledWith("KNT-PLAN-REF-001");
+    expect(onPlanActivated).toHaveBeenCalledWith({ name: "Pro", id: 2 });
+    expect(queryClient.setQueryData).toHaveBeenCalledWith(
+      ["profile-dashboard"],
+      expect.any(Function)
+    );
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["profile-dashboard"],
+    });
+    expect(queryClient.refetchQueries).toHaveBeenCalledWith({
+      queryKey: ["profile-dashboard"],
+      type: "active",
     });
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["payments"],
@@ -184,6 +229,7 @@ describe("Backend-driven checkout and verification flows", () => {
     });
     const queryClient = {
       invalidateQueries: jest.fn().mockResolvedValue(undefined),
+      refetchQueries: jest.fn().mockResolvedValue(undefined),
     };
     const toast = jest.fn();
 
