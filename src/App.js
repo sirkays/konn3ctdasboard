@@ -40,7 +40,7 @@ import HomeIcon from "./assets/components/HomeIcon";
 import CardIcon from "./assets/components/CardIcon";
 import RecordIcon from "./assets/components/RecordIcon";
 import VideoIcon from "./assets/components/VideoIcon";
-import StreamIcon from "./assets/components/StreamIcon";
+// import StreamIcon from "./assets/components/StreamIcon";
 // import AddonIcon from "./assets/components/AddonIcon";
 import RefereeIcon from "./assets/components/RefereeIcon";
 import DonationIcon from "./assets/components/DonationIcon";
@@ -89,7 +89,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     { titleKey: "app.sidebar.schedule", url: "/schedule", icon: CalendarDays },
     { titleKey: "app.sidebar.team", fallback: "Team", url: "/team", icon: UserIcon },
     { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
-    { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
+    // { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
     
     {
       titleKey: "app.sidebar.recordings",

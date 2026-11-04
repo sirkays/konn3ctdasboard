@@ -130,7 +130,6 @@ const Addon = () => {
   });
 
   const {
-    data: userData,
     isSuccess: userIsSuccess,
     isError: userIsError,
   } = useQuery({

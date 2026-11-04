@@ -1,6 +1,13 @@
 import axios from "axios";
 import { api } from ".";
-import { getToken } from "../services/cookies";
+
+const getAuthToken = () => {
+  try {
+    return typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
+  } catch {
+    return null;
+  }
+};
 
 const PAYSTACK_INLINE_SRC = "https://js.paystack.co/v2/inline.js";
 let paystackScriptPromise = null;
@@ -35,7 +42,7 @@ export const initializeCheckout = async (payload) => {
     return res.data;
   } catch (error) {
     if (error?.response?.status === 404) {
-      const token = getToken();
+      const token = getAuthToken();
       const res = await axios.post(getV1EndpointUrl("/checkout/initialize"), payload, {
         headers: {
           Accept: "application/json",
@@ -56,7 +63,7 @@ export const verifyCheckout = async (reference) => {
     return res.data;
   } catch (error) {
     if (error?.response?.status === 404 && !error?.response?.data?.hasOwnProperty("success")) {
-      const token = getToken();
+      const token = getAuthToken();
       const res = await axios.post(
         getV1EndpointUrl(`/checkout/verify/${encodedRef}`),
         { reference },

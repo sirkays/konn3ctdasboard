@@ -10,7 +10,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { getMeetings } from "../../api/attendanceApi";
+import { getMeetings, resolveMeetingRoomName } from "../../api/attendanceApi";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import {
@@ -37,11 +37,14 @@ const AttendanceList = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchMeetings = async () => {
       try {
         setLoading(true);
         setError(null);
         const data = await getMeetings(currentPage);
+        if (!isMounted) return;
         setMeetings(Array.isArray(data?.data) ? data.data : []);
         setMeetingsMeta({
           current_page: Number(data?.current_page) || currentPage,
@@ -53,14 +56,22 @@ const AttendanceList = () => {
         });
       } catch (err) {
         console.error("Failed to fetch meetings:", err);
+        if (!isMounted) return;
         setError(t("attendance.list.states.loadError", "Failed to load attendance list."));
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchMeetings();
-  }, [currentPage, t]);
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   const handleViewParticipants = (meetingId, identifier) => {
     navigate(`/attendance-details/${meetingId}/${identifier}`);
@@ -132,44 +143,55 @@ const AttendanceList = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-8">
-            {meetings.map((meeting, index) => (
-              <Card 
-                key={meeting.id || index} 
-                className="group relative overflow-hidden rounded-2xl border-border/60 bg-surface shadow-sm hover:shadow-md hover:border-brand-green/30 transition-all duration-300 flex flex-col"
-              >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-green/40 to-brand-blue/40" />
-                <CardContent className="p-5 flex flex-col flex-1">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-foreground bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md w-fit">
-                      <UserCircle className="h-4 w-4 text-brand-blue" />
-                      <span className="truncate max-w-[120px]">{meeting.host || t("attendance.common.notAvailable", "N/A")}</span>
-                    </div>
-                    <span className="text-xs font-bold text-muted-foreground bg-black/5 px-2 py-1 rounded-md">
-                      #{(Number(meetingsMeta.from) || 1) + index}
-                    </span>
-                  </div>
+            {meetings.map((meeting, index) => {
+              const displayRoomName =
+                resolveMeetingRoomName(meeting) ||
+                t("attendance.common.notAvailable", "N/A");
 
-                  <div className="mb-6 flex-1">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarDays className="h-4 w-4 shrink-0" />
-                      <span className="text-sm font-medium">
-                        {meeting.date
-                          ? `${meeting.date} ${meeting.time ? `• ${meeting.time}` : ""}`
-                          : t("attendance.list.states.noDate", "No Date")}
+              return (
+                <Card 
+                  key={meeting.id || index} 
+                  className="group relative overflow-hidden rounded-2xl border-border/60 bg-surface shadow-sm hover:shadow-md hover:border-brand-green/30 transition-all duration-300 flex flex-col"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-green/40 to-brand-blue/40" />
+                  <CardContent className="p-5 flex flex-col flex-1">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-md w-fit">
+                        <UserCircle className="h-4 w-4 text-brand-blue shrink-0" />
+                        <span
+                          className="truncate max-w-[160px]"
+                          title={displayRoomName}
+                        >
+                          {displayRoomName}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-muted-foreground bg-black/5 px-2 py-1 rounded-md">
+                        #{(Number(meetingsMeta.from) || 1) + index}
                       </span>
                     </div>
-                  </div>
 
-                  <Button
-                    onClick={() => handleViewParticipants(meeting.meeting_id, meeting.identifier)}
-                    className="main-action-button w-full h-10 rounded-xl font-semibold"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    {t("attendance.list.actions.viewParticipants", "View Participants")}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="mb-6 flex-1">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CalendarDays className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-medium">
+                          {meeting.date
+                            ? `${meeting.date} ${meeting.time ? `• ${meeting.time}` : ""}`
+                            : t("attendance.list.states.noDate", "No Date")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => handleViewParticipants(meeting.meeting_id, meeting.identifier)}
+                      className="main-action-button w-full h-10 rounded-xl font-semibold"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {t("attendance.list.actions.viewParticipants", "View Participants")}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
