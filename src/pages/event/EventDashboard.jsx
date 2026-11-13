@@ -432,7 +432,7 @@ const EventDashboard = () => {
       <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-[32px] font-extrabold leading-tight tracking-normal text-foreground">
-            Virtual Events
+            Event
           </h1>
           <p className="mt-2 text-lg font-medium text-muted-foreground">
             Host paid webinars and manage registered attendees.
@@ -499,7 +499,7 @@ const EventDashboard = () => {
           <Card className="rounded-xl border-border/60 bg-surface p-10 text-center shadow-sm">
             <p className="text-lg font-bold text-foreground">No events yet</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create your first virtual event to start accepting registrations.
+              Create your first event to start accepting registrations.
             </p>
           </Card>
         ) : (

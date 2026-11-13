@@ -88,7 +88,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     { titleKey: "app.sidebar.rooms", url: "/rooms", icon: VideoIcon },
     { titleKey: "app.sidebar.schedule", url: "/schedule", icon: CalendarDays },
     { titleKey: "app.sidebar.team", fallback: "Team", url: "/team", icon: UserIcon },
-    { titleKey: "app.sidebar.events", url: "/events", icon: EventIcon },
+    { titleKey: "app.sidebar.events", fallback: "Event", url: "/events", icon: EventIcon },
     // { titleKey: "app.sidebar.streaming", url: "/streams", icon: StreamIcon },
     
     {
