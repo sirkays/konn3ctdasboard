@@ -21,6 +21,7 @@ import {
 } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
 import ReferralCard from "../components/ReferralCard";
+// eslint-disable-next-line no-unused-vars
 import join from "../assets/icons/add-square.svg";
 import video from "../assets/icons/video-01.svg";
 

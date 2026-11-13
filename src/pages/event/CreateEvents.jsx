@@ -123,6 +123,9 @@ const CreateEvents = () => {
     amount: "",
   });
 
+  const parsedSelectedDate = parseInputDate(formData.date);
+  const isTodaySelected = Boolean(parsedSelectedDate) && startOfDay(parsedSelectedDate).getTime() === startOfDay(new Date()).getTime();
+
   const [existingLogo, setExistingLogo] = useState("");
   const [initialLoading, setInitialLoading] = useState(isEditing);
   const [loading, setLoading] = useState(false);

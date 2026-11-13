@@ -29,7 +29,7 @@ import {
   CheckCircle2, AlertCircle, Loader2, ExternalLink
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteRecording, getRecordings } from "../api/recordingApi";
+import { deleteRecording, getRecordings, downloadRecordingFile } from "../api/recordingApi";
 import { byteToMB, formatDate } from "../lib/utils";
 import { useToast } from "../hooks/use-toast";
 import { Skeleton } from "../components/ui/skeleton";
@@ -50,6 +50,7 @@ const Recordings = () => {
   const [selectedDate, setSelectedDate] = useState();
   const [currentPage, setCurrentPage] = useState(1);
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();

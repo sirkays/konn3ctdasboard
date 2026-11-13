@@ -10,6 +10,7 @@ import {
   Globe2,
   Mail,
   MoreVertical,
+  Pencil,
   Plus,
   UsersRound,
 } from "lucide-react";
