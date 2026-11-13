@@ -221,14 +221,14 @@ const Dashboard = () => {
               </p>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
+                <div className="flex gap-3 [&>*]:flex-1">
+                  {/* <Button
                     onClick={() => navigate("/join")}
                     className="w-full bg-white text-brand-blue hover:bg-gray-100 h-12 rounded-xl font-bold transition-transform active:scale-95 px-2"
                   >
                     <img src={join} alt="Join" className="w-4 h-4 mr-2" style={{ filter: "brightness(0) saturate(100%) invert(18%) sepia(90%) saturate(2250%) hue-rotate(209deg) brightness(97%) contrast(105%)" }} />
                     Join
-                  </Button>
+                  </Button> */}
                   <Button
                     onClick={() => navigate("/rooms")}
                     className="main-action-button w-full h-12 rounded-xl font-bold px-2"
