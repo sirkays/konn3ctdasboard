@@ -133,6 +133,26 @@ export const createPreRegEvent = async (formData) => {
   }
 };
 
+export const updatePreRegEvent = async (reference, formData) => {
+  try {
+    const isFormData = formData instanceof FormData;
+    if (isFormData && reference && !formData.get("reference")) {
+      formData.append("reference", reference);
+    }
+    const config = {};
+    if (!isFormData) {
+      config.headers = { "Content-Type": "application/json" };
+    }
+
+    const encodedRef = encodeURIComponent(reference || "");
+    const res = await api.post(`/pre-reg/update/${encodedRef}`, formData, config);
+    return res.data;
+  } catch (error) {
+    console.error("Error updating pre-registration event:", error);
+    throw error;
+  }
+};
+
 export const getRooms = async () => {
   try {
     const res = await api.get("/myrooms");

@@ -51,7 +51,7 @@
       "recordings": "Recordings",
       "payments": "Plans & Payments",
       "addons": "Addons",
-      "referees": "Referee(s)",
+      "referees": "Referral List",
       "donations": "Donations",
       "attendance": "Attendance",
       "events": "Event",
@@ -1134,11 +1134,11 @@
     }
   },
   "referees": {
-    "title": "Referee List",
+    "title": "Referral List",
     "controls": {
       "showEntries": "Show entries",
       "search": "Search:",
-      "searchPlaceholder": "Search referees"
+      "searchPlaceholder": "Search referrals"
     },
     "table": {
       "serial": "#",
@@ -1148,9 +1148,9 @@
       "dateRegistered": "Date Registered"
     },
     "states": {
-      "loadErrorTitle": "Unable to load referees.",
+      "loadErrorTitle": "Unable to load referral list.",
       "loadErrorDescription": "Please try again when your network is stable.",
-      "empty": "No data available for this table",
+      "empty": "No referrals found",
       "notAvailable": "N/A"
     }
   },

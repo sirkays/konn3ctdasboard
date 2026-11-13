@@ -321,10 +321,20 @@ export const runPlanCheckoutFlow = async ({
             onPlanActivated({ name: plan.name, id: plan.id });
           }
 
-          const refToVerify = localReference || tx?.reference || tx?.trxref;
+          const primaryRef = localReference || tx?.reference || tx?.trxref;
+          const secondaryRef = tx?.reference || tx?.trxref;
           let verifyRes = null;
-          if (refToVerify) {
-            verifyRes = await verifyCheckoutFn(refToVerify);
+
+          if (primaryRef) {
+            try {
+              verifyRes = await verifyCheckoutFn(primaryRef);
+            } catch (firstErr) {
+              if (secondaryRef && secondaryRef !== primaryRef) {
+                verifyRes = await verifyCheckoutFn(secondaryRef);
+              } else {
+                throw firstErr;
+              }
+            }
           }
 
           applyPlanToProfileCache(queryClient, plan, verifyRes);
@@ -340,6 +350,9 @@ export const runPlanCheckoutFlow = async ({
             description: t("payments.toasts.purchaseSuccessful", "Purchase successful! Your subscription is now active."),
           });
         } catch (verifyError) {
+          if (onPlanActivated) {
+            onPlanActivated(null);
+          }
           await invalidateBillingQueries(queryClient);
           toast({
             description:

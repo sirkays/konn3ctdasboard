@@ -97,7 +97,7 @@ const Referee = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{t("referees.title", "Referees")}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{t("referees.title", "Referral List")}</h1>
           <p className="text-muted-foreground mt-1">Manage and view users who registered using your referral link.</p>
         </div>
       </div>
@@ -114,7 +114,7 @@ const Referee = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-11 bg-black/[0.02] border-border/60 rounded-xl focus-visible:ring-brand-green/30 focus-visible:border-brand-green/50 w-full sm:w-[300px]"
-            placeholder={t("referees.controls.searchPlaceholder", "Search referees...")}
+            placeholder={t("referees.controls.searchPlaceholder", "Search referrals...")}
           />
         </div>
       </div>
@@ -161,7 +161,7 @@ const Referee = () => {
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-black/[0.02] mb-4">
               <User2 className="h-8 w-8 text-muted-foreground/50" />
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-1">{t("referees.states.empty", "No referees found")}</h3>
+            <h3 className="text-lg font-medium text-foreground mb-1">{t("referees.states.empty", "No referrals found")}</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
               When users sign up using your referral link, they will appear here.
             </p>

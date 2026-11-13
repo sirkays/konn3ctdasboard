@@ -98,7 +98,7 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     },
     { titleKey: "app.sidebar.payments", url: "/payments", icon: CardIcon },
     // { titleKey: "app.sidebar.addons", url: "/addons", icon: AddonIcon },
-    { titleKey: "app.sidebar.referees", url: "/referees", icon: RefereeIcon },
+    { titleKey: "app.sidebar.referees", fallback: "Referral List", url: "/referees", icon: RefereeIcon },
     {
       titleKey: "app.sidebar.donations",
       url: "/donations",

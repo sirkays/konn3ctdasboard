@@ -11,6 +11,7 @@ import {
   Eye,
   Mail,
   MoreVertical,
+  Pencil,
   Share2,
   UsersRound,
 } from "lucide-react";
@@ -385,13 +386,23 @@ const EventDetail = () => {
           </div>
         </div>
 
-        <Button
-          onClick={copyRegistrationLink}
-          className="main-action-button h-11 w-full rounded-xl px-5 text-sm font-bold sm:w-auto"
-        >
-          <Share2 className="h-4 w-4" />
-          Share Registration Link
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/events/edit/${getEventReference(event) || reference}`, { state: { event } })}
+            className="h-11 w-full rounded-xl border-border/70 bg-surface px-5 text-sm font-bold text-foreground shadow-sm hover:bg-muted/30 sm:w-auto"
+          >
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit Event
+          </Button>
+          <Button
+            onClick={copyRegistrationLink}
+            className="main-action-button h-11 w-full rounded-xl px-5 text-sm font-bold sm:w-auto"
+          >
+            <Share2 className="h-4 w-4" />
+            Share Registration Link
+          </Button>
+        </div>
       </div>
 
       <div className="mb-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

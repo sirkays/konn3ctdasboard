@@ -60,8 +60,27 @@ const meetingHasAccessCode = (meeting) => Boolean(getAccessCodeValue(meeting));
 const getRoomAccessCodeValue = (room) => getAccessCodeValue(room);
 
 const getRoomColor = (room) => {
-  const color = String(room?.color ?? "").trim();
-  return HEX_COLOR_PATTERN.test(color) ? color : DEFAULT_ROOM_COLOR;
+  const rawColor = String(room?.color ?? "").trim();
+  try {
+    const storedColors = JSON.parse(localStorage.getItem("konn3ct_room_colors") || "{}");
+    const byId = room?.id ? storedColors[`id:${room.id}`] : null;
+    const byUrl = room?.url ? storedColors[`url:${String(room.url).toLowerCase()}`] : null;
+    const byName = room?.name ? storedColors[`name:${String(room.name).trim().toLowerCase()}`] : null;
+    const localColor = byId || byUrl || byName;
+
+    if ((!HEX_COLOR_PATTERN.test(rawColor) || rawColor.toLowerCase() === "#00d492") && HEX_COLOR_PATTERN.test(String(localColor || ""))) {
+      return localColor;
+    }
+    if (HEX_COLOR_PATTERN.test(rawColor)) {
+      return rawColor;
+    }
+    if (HEX_COLOR_PATTERN.test(String(localColor || ""))) {
+      return localColor;
+    }
+  } catch (_err) {
+    if (HEX_COLOR_PATTERN.test(rawColor)) return rawColor;
+  }
+  return DEFAULT_ROOM_COLOR;
 };
 
 const generateAccessCode = (length = 8) => {

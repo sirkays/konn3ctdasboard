@@ -295,7 +295,21 @@ export default function NewSchedule() {
     title: z.string().trim()
       .min(1, { message: "Title is required" })
       .max(255, { message: "Title cannot exceed 255 characters" }),
-    date: z.date({ required_error: "Date is required" }).nullable().refine((val) => val instanceof Date && !Number.isNaN(val.getTime()), { message: "Invalid date" }),
+    date: z
+      .date({ required_error: "Date is required" })
+      .nullable()
+      .refine((val) => val instanceof Date && !Number.isNaN(val.getTime()), { message: "Invalid date" })
+      .refine(
+        (val) => {
+          if (!(val instanceof Date) || Number.isNaN(val.getTime())) return false;
+          const selectedDay = new Date(val);
+          selectedDay.setHours(0, 0, 0, 0);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return selectedDay >= today;
+        },
+        { message: "Previous dates are not accepted" }
+      ),
     fromtime: z.string().trim().min(1, { message: "Start time is required" }),
     totime: z.string().trim().min(1, { message: "End time is required" }),
     timezone: z.string().trim().min(1, { message: "Timezone is required" }),

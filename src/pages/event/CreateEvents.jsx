@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { 
   CalendarPlus, 
@@ -13,10 +13,11 @@ import {
   FileText, 
   Tag, 
   DollarSign, 
-  Bell 
+  Bell,
+  Pencil
 } from "lucide-react";
 
-import { createPreRegEvent, getRooms } from "../../api/eventsApi";
+import { createPreRegEvent, updatePreRegEvent, getEventList, getRooms } from "../../api/eventsApi";
 import { useToast } from "../../hooks/use-toast";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -29,6 +30,50 @@ import { BrandedDatePicker, parseInputDate, formatDateForInput } from "../../com
 const getTimezones = () =>
   Intl.supportedValuesOf("timeZone").map((timezone) => timezone);
 const getRoomFallbackLabel = (id) => `Room ${id}`;
+
+const startOfDay = (date) => {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+const isPastDateValue = (value) => {
+  const parsed = parseInputDate(value);
+  if (!parsed) return false;
+  return startOfDay(parsed) < startOfDay(new Date());
+};
+
+const deriveReminderOption = (eventDateStr, reminderStr) => {
+  if (!reminderStr) return "1";
+  const trimmed = String(reminderStr).trim();
+  if (trimmed === "1" || trimmed === "2") return trimmed;
+  const eventDate = parseInputDate(eventDateStr);
+  const reminderDate = parseInputDate(trimmed);
+  if (eventDate && reminderDate) {
+    const diffDays = Math.round((startOfDay(eventDate) - startOfDay(reminderDate)) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 2) return "2";
+    return "1";
+  }
+  return "1";
+};
+
+const normalizeTimeForSelect = (rawTime) => {
+  if (!rawTime) return "";
+  const match = String(rawTime).trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return String(rawTime).trim();
+  return `${String(match[1]).padStart(2, "0")}:${match[2]}`;
+};
+
+const normalizeDateString = (rawDate) => {
+  if (!rawDate) return "";
+  const str = String(rawDate).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const parsed = new Date(str);
+  if (!Number.isNaN(parsed.getTime())) {
+    return formatDateForInput(parsed);
+  }
+  return str.slice(0, 10);
+};
 
 const getCreateEventErrorMessage = (error, fallbackMessage) => {
   const backendMessage = String(
@@ -55,7 +100,10 @@ const getCreateEventErrorMessage = (error, fallbackMessage) => {
 const CreateEvents = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { reference } = useParams();
+  const location = useLocation();
   const { toast } = useToast();
+  const isEditing = Boolean(reference);
   
   const fileInputRef = useRef(null);
 
@@ -74,6 +122,8 @@ const CreateEvents = () => {
     amount: "",
   });
 
+  const [existingLogo, setExistingLogo] = useState("");
+  const [initialLoading, setInitialLoading] = useState(isEditing);
   const [loading, setLoading] = useState(false);
   const [logoError, setLogoError] = useState("");
   const [rooms, setRooms] = useState([]);
@@ -83,6 +133,78 @@ const CreateEvents = () => {
   useEffect(() => {
     setTimezones(getTimezones());
   }, []);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setInitialLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const applyEventToForm = (ev) => {
+      if (!ev || cancelled) return;
+      const dateVal = normalizeDateString(ev.date || ev.event_date || ev.start_date || "");
+      const freeBool =
+        ev.free === 1 ||
+        ev.free === "1" ||
+        ev.free === true ||
+        String(ev.free).toLowerCase() === "true" ||
+        (ev.free === undefined && Number(ev.amount || 0) === 0);
+
+      setFormData({
+        title: ev.title || ev.name || ev.event_title || "",
+        host: ev.host_name || ev.hostname || ev.host || "",
+        room: ev.room_id ? String(ev.room_id) : ev.room ? String(ev.room) : "",
+        date: dateVal,
+        time: normalizeTimeForSelect(ev.time || ev.event_time || ""),
+        timezone: ev.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "Africa/Lagos",
+        about: ev.about || ev.description || "",
+        reminder: deriveReminderOption(dateVal, ev.reminder),
+        logo: null,
+        free: freeBool ? "1" : "0",
+        currency: String(ev.currency || "NGN").toUpperCase(),
+        amount: freeBool ? "" : String(ev.amount ?? ""),
+      });
+      setExistingLogo(ev.logo || "");
+    };
+
+    const loadExistingEvent = async () => {
+      try {
+        setInitialLoading(true);
+        if (location.state?.event) {
+          applyEventToForm(location.state.event);
+        }
+        const eventList = await getEventList();
+        const found = (Array.isArray(eventList) ? eventList : []).find(
+          (item) =>
+            String(item?.reference || item?.event_reference || item?.slug || item?.id) ===
+            String(reference)
+        );
+        if (found) {
+          applyEventToForm(found);
+        } else if (!location.state?.event && !cancelled) {
+          toast({
+            description: "Event could not be found.",
+            variant: "destructive",
+          });
+          navigate("/events");
+        }
+      } catch (err) {
+        console.error("Failed to load event for editing:", err);
+      } finally {
+        if (!cancelled) {
+          setInitialLoading(false);
+        }
+      }
+    };
+
+    loadExistingEvent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, reference, location.state, navigate, toast]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +288,17 @@ const CreateEvents = () => {
       return;
     }
 
+    if (isPastDateValue(formData.date)) {
+      toast({
+        description: t(
+          "events.create.validation.pastDateNotAllowed",
+          "Previous dates are not accepted as an event day. Please choose today or a future date."
+        ),
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.room) {
       toast({
         description: t("events.create.validation.roomRequired", "Please choose a room."),
@@ -198,7 +331,7 @@ const CreateEvents = () => {
       return;
     }
 
-    if (!formData.logo) {
+    if (!isEditing && !formData.logo && !existingLogo) {
       setLogoError(t("events.create.validation.logoRequired", "Please upload an event logo."));
       return;
     }
@@ -222,20 +355,29 @@ const CreateEvents = () => {
       data.append("currency", formData.currency);
       data.append("amount", formData.free === "1" ? 0 : formData.amount);
 
-      const response = await createPreRegEvent(data);
+      const response = isEditing
+        ? await updatePreRegEvent(reference, data)
+        : await createPreRegEvent(data);
 
       if (response?.success) {
-        toast({ description: t("events.create.toasts.created", "Event created successfully!") });
-        navigate("/events");
+        toast({
+          description: isEditing
+            ? t("events.edit.toasts.updated", "Event updated successfully!")
+            : t("events.create.toasts.created", "Event created successfully!"),
+        });
+        navigate(isEditing ? `/events/detail/${reference}` : "/events");
       } else {
         toast({
           description:
-            response?.message || t("events.create.toasts.createFailed", "Failed to create event."),
+            response?.message ||
+            (isEditing
+              ? t("events.edit.toasts.updateFailed", "Failed to update event.")
+              : t("events.create.toasts.createFailed", "Failed to create event.")),
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error creating event:", error);
+      console.error(isEditing ? "Error updating event:" : "Error creating event:", error);
       toast({
         description: getCreateEventErrorMessage(
           error,
@@ -248,20 +390,38 @@ const CreateEvents = () => {
     }
   };
 
+  if (initialLoading) {
+    return (
+      <div className="flex h-[calc(100vh-120px)] w-full items-center justify-center">
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">
+          Loading event details...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex-1 p-4 md:p-6 lg:p-8 animate-in fade-in duration-500 max-w-4xl mx-auto">
       <Card className="w-full rounded-2xl border-border/60 bg-surface shadow-md overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 bg-black/[0.01] p-6 sm:px-8">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-green/10 shrink-0">
-              <CalendarPlus className="h-6 w-6 text-brand-green" />
+              {isEditing ? (
+                <Pencil className="h-6 w-6 text-brand-green" />
+              ) : (
+                <CalendarPlus className="h-6 w-6 text-brand-green" />
+              )}
             </div>
             <div>
               <CardTitle className="text-xl font-bold text-foreground">
-                {t("events.create.title", "Create New Event")}
+                {isEditing
+                  ? t("events.edit.title", "Edit Event")
+                  : t("events.create.title", "Create New Event")}
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {t("events.create.description", "Set up your pre-registered event details.")}
+                {isEditing
+                  ? t("events.edit.description", "Update your event schedule, details, or ticket settings.")
+                  : t("events.create.description", "Set up your pre-registered event details.")}
               </p>
             </div>
           </div>
@@ -371,6 +531,7 @@ const CreateEvents = () => {
                   <div className="relative">
                     <BrandedDatePicker
                       value={parseInputDate(formData.date)}
+                      minDate={new Date()}
                       onChange={(date) =>
                         setFormData((previousData) => ({
                           ...previousData,
@@ -527,13 +688,13 @@ const CreateEvents = () => {
                     {t("events.create.fileHelp", "SVG, PNG, JPG or PDF (max. 800x400px)")}
                   </span>
 
-                  {formData.logo && (
+                  {(formData.logo || existingLogo) && (
                     <div className="absolute inset-0 bg-surface/90 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl p-4">
                       <div className="h-12 w-12 rounded-full bg-brand-green/10 flex items-center justify-center mb-2">
                         <UploadCloud className="h-6 w-6 text-brand-green" />
                       </div>
                       <p className="text-sm font-bold text-foreground truncate max-w-full">
-                        {formData.logo.name}
+                        {formData.logo ? formData.logo.name : `Current banner (${existingLogo})`}
                       </p>
                       <p className="text-xs text-brand-green mt-1 font-medium">Click or drag to replace</p>
                     </div>
@@ -547,7 +708,7 @@ const CreateEvents = () => {
               <Button 
                 variant="ghost" 
                 className="hidden sm:flex rounded-xl" 
-                onClick={() => navigate("/events")}
+                onClick={() => navigate(isEditing ? `/events/detail/${reference}` : "/events")}
                 type="button"
               >
                 {t("common.actions.cancel", "Cancel")}
@@ -560,12 +721,20 @@ const CreateEvents = () => {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    {t("events.create.actions.submitting", "Creating...")}
+                    {isEditing
+                      ? t("events.edit.actions.submitting", "Saving...")
+                      : t("events.create.actions.submitting", "Creating...")}
                   </div>
                 ) : (
                   <>
-                    <CalendarPlus className="mr-2 h-5 w-5" />
-                    {t("common.actions.submit", "Create Event")}
+                    {isEditing ? (
+                      <Pencil className="mr-2 h-5 w-5" />
+                    ) : (
+                      <CalendarPlus className="mr-2 h-5 w-5" />
+                    )}
+                    {isEditing
+                      ? t("events.edit.actions.submit", "Save Changes")
+                      : t("common.actions.submit", "Create Event")}
                   </>
                 )}
               </Button>

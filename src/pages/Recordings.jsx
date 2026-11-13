@@ -254,27 +254,78 @@ const Recordings = () => {
     });
   };
 
-  const handleDownloadVideo = (rec) => {
-    if (rec.url) {
-      window.open(rec.url, "_blank", "noopener,noreferrer");
+  const handleDownloadVideo = async (rec) => {
+    if (!rec) return;
+
+    if (rec.status === "failed") {
+      toast({
+        variant: "destructive",
+        title: "Recording Failed",
+        description: "This recording session could not be processed for download.",
+      });
       return;
     }
-    if (rec.id && process.env.REACT_APP_VIDEO_DOWNLOAD_BASE) {
-      const url = `${process.env.REACT_APP_VIDEO_DOWNLOAD_BASE}/${rec.id}/video/webcams.mp4`;
-      window.open(url, "_blank", "noopener,noreferrer");
+
+    if (rec.status === "recording") {
+      toast({
+        title: "Recording In Progress",
+        description: "Please wait until the recording session completes before downloading.",
+      });
       return;
     }
-    toast({
-      variant: "destructive",
-      description: "No video file available for download.",
-    });
+
+    const targetUrl = rec.downloadUrl || rec.url || null;
+    if (!targetUrl && !rec.id) {
+      toast({
+        variant: "destructive",
+        description: "No video file available for download.",
+      });
+      return;
+    }
+
+    try {
+      setDownloadingId(rec.id);
+      toast({ description: t("recordings.toasts.downloadStarted", "Preparing recording download...") });
+      await downloadRecordingFile({
+        id: rec.id,
+        url: targetUrl,
+        title: rec.title || rec.roomName || rec.id,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error?.message || "No video file available for download.",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
-  const downloadLegacyParam = (id, param) => {
-    const RECORDING_DOWNLOAD_BASE = process.env.REACT_APP_RECORDING_DOWNLOAD_BASE;
-    if (!RECORDING_DOWNLOAD_BASE || !id) return;
-    const url = `${RECORDING_DOWNLOAD_BASE}/${id}/${param}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+  const downloadLegacyParam = async (id, param, title = "") => {
+    if (!id) {
+      toast({
+        variant: "destructive",
+        description: "Recording identifier is missing.",
+      });
+      return;
+    }
+
+    try {
+      setDownloadingId(id);
+      toast({ description: t("recordings.toasts.downloadStarted", "Preparing recording download...") });
+      await downloadRecordingFile({
+        id,
+        title: title || `${id}-${param}`,
+        param,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: error?.message || "Unable to download recording asset.",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const formatDurationBadge = (durationMins, status, url) => {
@@ -494,8 +545,18 @@ const Recordings = () => {
                               setOpenDropdownId(null);
                             }}
                           />
-                          <div className="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-xl border border-border/60 bg-white text-black shadow-lg animate-in zoom-in-95 duration-150 dark:bg-black dark:text-white">
-                            <div className="p-1.5">
+                          <div className="absolute right-0 top-8 z-50 w-44 overflow-hidden rounded-xl border border-border/60 bg-white text-black shadow-lg animate-in zoom-in-95 duration-150 dark:bg-black dark:text-white">
+                            <div className="p-1.5 space-y-0.5">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenDropdownId(null);
+                                  handleDownloadVideo(rec);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-colors"
+                              >
+                                <Download className="h-4 w-4" /> {t("recordings.actions.download", "Download")}
+                              </button>
                               <button
                                 onClick={() => handleDeleteClick(rec.id)}
                                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
@@ -545,19 +606,29 @@ const Recordings = () => {
                   {rec.url ? (
                     <button
                       onClick={() => handleDownloadVideo(rec)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.02] hover:bg-brand-green/10 text-muted-foreground hover:text-brand-green transition-colors"
+                      disabled={downloadingId === rec.id}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.02] hover:bg-brand-green/10 text-muted-foreground hover:text-brand-green transition-colors disabled:opacity-50"
                       title={t("recordings.actions.download", "Download Video")}
                     >
-                      <Download className="h-3.5 w-3.5" />
+                      {downloadingId === rec.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   ) : (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.02] hover:bg-brand-green/10 text-muted-foreground hover:text-brand-green transition-colors"
+                          disabled={downloadingId === rec.id}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/[0.02] hover:bg-brand-green/10 text-muted-foreground hover:text-brand-green transition-colors disabled:opacity-50"
                           title={t("recordings.actions.download", "Download")}
                         >
-                          <Download className="h-3.5 w-3.5" />
+                          {downloadingId === rec.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48 rounded-xl border-border/60 shadow-lg p-1.5">
@@ -569,14 +640,14 @@ const Recordings = () => {
                           {t("recordings.actions.video", "Video (MP4)")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => downloadLegacyParam(rec.id, "screenshare")}
+                          onClick={() => downloadLegacyParam(rec.id, "screenshare", rec.title)}
                           className="rounded-lg cursor-pointer flex items-center gap-2"
                         >
                           <Monitor className="w-4 h-4 text-muted-foreground" />
                           {t("recordings.actions.screenshare", "Screenshare")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => downloadLegacyParam(rec.id, "chats")}
+                          onClick={() => downloadLegacyParam(rec.id, "chats", rec.title)}
                           className="rounded-lg cursor-pointer flex items-center gap-2"
                         >
                           <MessageSquare className="w-4 h-4 text-muted-foreground" />
@@ -653,14 +724,32 @@ const Recordings = () => {
               )}
             </div>
             {activeVideo?.url && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white rounded-lg shrink-0 mr-6"
-                onClick={() => window.open(activeVideo.url, "_blank", "noopener,noreferrer")}
-              >
-                Open in new tab <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-              </Button>
+              <div className="flex items-center gap-2 shrink-0 mr-6">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white rounded-lg"
+                  onClick={() =>
+                    handleDownloadVideo({
+                      id: activeVideo.id || "recording",
+                      title: activeVideo.title,
+                      roomName: activeVideo.roomName,
+                      url: activeVideo.url,
+                      downloadUrl: activeVideo.url,
+                    })
+                  }
+                >
+                  Download <Download className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs border-zinc-700 bg-zinc-800 text-zinc-200 hover:bg-zinc-700 hover:text-white rounded-lg"
+                  onClick={() => window.open(activeVideo.url, "_blank", "noopener,noreferrer")}
+                >
+                  Open in new tab <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              </div>
             )}
           </div>
           <div className="relative aspect-video w-full bg-black flex items-center justify-center">

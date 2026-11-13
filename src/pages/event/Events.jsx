@@ -20,6 +20,12 @@ const Events = () => {
           element={<CreateEvents onClose={() => navigate("/events")} />}
         />
 
+        {/* Edit event form */}
+        <Route
+          path="edit/:reference"
+          element={<CreateEvents onClose={() => navigate("/events")} />}
+        />
+
         {/* Participant route */}
         <Route
           path="participants/:reference"

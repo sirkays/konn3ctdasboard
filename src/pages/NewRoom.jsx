@@ -41,8 +41,41 @@ export default function NewRoom() {
 
   const createMeetingMutation = useMutation({
     mutationFn: createMeeting,
-    onSuccess: (res) => {
+    onSuccess: (res, variables) => {
       if (res?.success) {
+        const selectedColor = variables?.color || color || "#10b981";
+        const createdRoom = res?.data;
+
+        try {
+          const storedColors = JSON.parse(localStorage.getItem("konn3ct_room_colors") || "{}");
+          if (createdRoom?.id) {
+            storedColors[`id:${createdRoom.id}`] = selectedColor;
+          }
+          if (createdRoom?.url || variables?.url) {
+            storedColors[`url:${(createdRoom?.url || variables?.url).toLowerCase()}`] = selectedColor;
+          }
+          if (variables?.name) {
+            storedColors[`name:${variables.name.trim().toLowerCase()}`] = selectedColor;
+          }
+          localStorage.setItem("konn3ct_room_colors", JSON.stringify(storedColors));
+        } catch (_err) {
+          // ignore storage errors
+        }
+
+        if (createdRoom && typeof createdRoom === "object") {
+          queryClient.setQueryData(["rooms"], (prev) => {
+            if (!prev || !Array.isArray(prev.rooms)) return prev;
+            const exists = prev.rooms.some((r) => String(r.id) === String(createdRoom.id));
+            const roomWithColor = { ...createdRoom, color: selectedColor };
+            return {
+              ...prev,
+              rooms: exists
+                ? prev.rooms.map((r) => (String(r.id) === String(createdRoom.id) ? roomWithColor : r))
+                : [roomWithColor, ...prev.rooms],
+            };
+          });
+        }
+
         queryClient.invalidateQueries({ queryKey: ["rooms"] });
         toast({ description: t("rooms.toasts.meetingCreated", "Room created successfully") });
         navigate("/rooms");
@@ -113,7 +146,7 @@ export default function NewRoom() {
         <Card className="rounded-2xl border-border/60 bg-surface">
           <CardContent className="p-6 space-y-5">
             <h3 className="text-lg font-bold text-foreground border-b border-border/40 pb-3 flex items-center gap-2">
-              <Video className="w-5 h-5 text-brand-green" /> Room Information
+              <Video className="w-5 h-5 transition-colors" style={{ color }} /> Room Information
             </h3>
 
             <div className="space-y-2">
@@ -200,22 +233,41 @@ export default function NewRoom() {
 
           <Card className="rounded-2xl border-border/60 bg-surface h-full">
             <CardContent className="p-6 space-y-5">
-              <h3 className="text-lg font-bold text-foreground border-b border-border/40 pb-3 flex items-center gap-2">
-                <Palette className="w-5 h-5 text-brand-green" /> Room Color
-              </h3>
+              <div className="border-b border-border/40 pb-3 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                  <Palette className="w-5 h-5 transition-colors" style={{ color }} /> Room Color
+                </h3>
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                  <span className="h-3 w-3 rounded-full border border-black/10" style={{ backgroundColor: color }} />
+                  {colors.find((c) => c.value.toLowerCase() === color.toLowerCase())?.label || color}
+                </span>
+              </div>
               <div className="grid grid-cols-3 gap-3">
-                {colors.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setColor(c.value)}
-                    className={`relative h-14 rounded-xl flex items-center justify-center transition-all ${c.bgClass} hover:opacity-90
-                      ${color === c.value ? "ring-2 ring-offset-2 ring-brand-green shadow-md scale-[1.02]" : "opacity-80"}
-                    `}
-                  >
-                    {color === c.value && <Check className="w-5 h-5 text-white" />}
-                  </button>
-                ))}
+                {colors.map((c) => {
+                  const isSelected = color.toLowerCase() === c.value.toLowerCase();
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-label={c.label}
+                      aria-pressed={isSelected}
+                      onClick={() => setColor(c.value)}
+                      style={{
+                        backgroundColor: c.value,
+                        boxShadow: isSelected ? `0 0 0 3px var(--background, #fff), 0 0 0 5px ${c.value}` : undefined,
+                      }}
+                      className={`relative h-14 rounded-xl flex flex-col items-center justify-center transition-all ${c.bgClass}
+                        ${isSelected ? "scale-[1.04] opacity-100 font-bold" : "opacity-75 hover:opacity-95"}
+                      `}
+                    >
+                      {isSelected ? (
+                        <Check className="w-5 h-5 text-white drop-shadow" />
+                      ) : (
+                        <span className="text-[11px] font-semibold text-white/90 drop-shadow-sm">{c.label}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

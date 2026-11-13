@@ -537,15 +537,32 @@ const EventDashboard = () => {
                         </div>
                       </div>
 
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-bold ${
-                          free
-                            ? "bg-brand-green/10 text-brand-green"
-                            : "bg-[#ff920a]/10 text-[#e57700]"
-                        }`}
-                      >
-                        {free ? "Free" : "Paid"}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            free
+                              ? "bg-brand-green/10 text-brand-green"
+                              : "bg-[#ff920a]/10 text-[#e57700]"
+                          }`}
+                        >
+                          {free ? "Free" : "Paid"}
+                        </span>
+                        {reference && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/events/edit/${reference}`, { state: { event } });
+                            }}
+                            className="h-8 rounded-lg border-border/60 px-2.5 text-xs font-semibold hover:bg-muted/40"
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="border-t border-border/50 pt-5">
