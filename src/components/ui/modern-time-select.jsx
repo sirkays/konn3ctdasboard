@@ -16,7 +16,7 @@ const displayTime = ({ hour, minute }, use24Hour) =>
 export function ModernTimeSelect({
   value, onValueChange, name, disabled = false, invalid = false,
   required = false, placeholder = "Select time", className,
-  triggerClassName, menuClassName, accent = "green", "aria-label": ariaLabel,
+  triggerClassName, menuClassName, accent = "green", "aria-label": ariaLabel, minTime,
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -32,6 +32,7 @@ export function ModernTimeSelect({
     hour: use24Hour ? Number(hour) : Number(hour) % 12 + (period === "PM" ? 12 : 0),
     minute: Number(minute),
   };
+  const belowMin = Boolean(minTime) && valid && (draft.hour * 60 + draft.minute) < (minTime.hour * 60 + minTime.minute);
   const active = accent === "blue" ? "bg-brand-blue text-white" : "bg-brand-green text-white";
   const focus = "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
   const loadTime = (time, format = use24Hour) => {
@@ -44,7 +45,7 @@ export function ModernTimeSelect({
     setOpen(next);
   };
   const apply = () => {
-    if (!valid || disabled) return;
+    if (!valid || disabled || belowMin) return;
     onValueChange?.(`${pad(draft.hour)}:${pad(draft.minute)}`);
     setOpen(false);
   };
@@ -70,7 +71,7 @@ export function ModernTimeSelect({
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <p id={`${id}-title`} className="text-sm font-bold">Make time yours</p>
-                <p className="mt-1 text-xs text-muted-foreground">Any hour. Every minute.</p>
+                <p className={cn("mt-1 text-xs", belowMin ? "text-red-500 font-semibold" : "text-muted-foreground")}>{belowMin ? "Past times are not allowed for today." : "Any hour. Every minute."}</p>
               </div>
               <div className="flex rounded-lg bg-muted p-1" aria-label="Time format">
                 {[false, true].map((format) => (

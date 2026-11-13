@@ -547,21 +547,6 @@ const EventDashboard = () => {
                         >
                           {free ? "Free" : "Paid"}
                         </span>
-                        {reference && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/events/edit/${reference}`, { state: { event } });
-                            }}
-                            className="h-8 rounded-lg border-border/60 px-2.5 text-xs font-semibold hover:bg-muted/40"
-                          >
-                            <Pencil className="mr-1 h-3.5 w-3.5" />
-                            Edit
-                          </Button>
-                        )}
                       </div>
                     </div>
 
@@ -587,6 +572,20 @@ const EventDashboard = () => {
                         </div>
                       </div>
                     </div>
+
+                    {reference && (
+                      <Button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/events/edit/${reference}`, { state: { event } });
+                        }}
+                        className="mt-5 h-10 w-full rounded-xl bg-brand-green text-sm font-bold text-white hover:bg-brand-green/90"
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Event
+                      </Button>
+                    )}
                   </Card>
                 );
               })}

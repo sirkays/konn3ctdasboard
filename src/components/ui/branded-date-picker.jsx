@@ -207,7 +207,7 @@ export function BrandedCalendar({
                 "focus:outline-none focus:ring-2 focus:ring-brand-green/30",
                 compact ? "h-8 text-xs" : "h-9 text-sm",
                 outside && "text-muted-foreground/45",
-                disabled && "cursor-not-allowed text-muted-foreground/25",
+                disabled && "cursor-not-allowed bg-muted/40 text-muted-foreground/40 line-through opacity-60",
                 !disabled && !selected && "hover:bg-brand-green/10 hover:text-brand-green",
                 current && !selected && !disabled && "text-brand-green",
                 selected && "bg-brand-green text-white shadow-sm shadow-brand-green/25"

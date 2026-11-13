@@ -104,6 +104,7 @@ const CreateEvents = () => {
   const location = useLocation();
   const { toast } = useToast();
   const isEditing = Boolean(reference);
+
   
   const fileInputRef = useRef(null);
 
@@ -286,6 +287,15 @@ const CreateEvents = () => {
         variant: "destructive",
       });
       return;
+    }
+
+    if (formData.date && formData.time && !isPastDateValue(formData.date) && isTodaySelected) {
+      const [h, m] = String(formData.time).split(":").map(Number);
+      const now = new Date();
+      if (h * 60 + m < now.getHours() * 60 + now.getMinutes()) {
+        toast({ description: "Past times are not allowed for today. Please choose a later time.", variant: "destructive" });
+        return;
+      }
     }
 
     if (isPastDateValue(formData.date)) {
@@ -555,6 +565,7 @@ const CreateEvents = () => {
                       onValueChange={(value) => setFormData((previousData) => ({ ...previousData, time: value }))}
                       placeholder="Select time"
                       required
+                      minTime={isTodaySelected ? { hour: new Date().getHours(), minute: new Date().getMinutes() } : undefined}
                     />
                   </div>
                 </div>
@@ -592,6 +603,7 @@ const CreateEvents = () => {
                   <Label className="text-sm font-semibold">{t("events.create.fields.eventType", "Event Type")}</Label>
                   <ModernSelect
                     name="free"
+                    disabled={isEditing}
                     value={formData.free}
                     onValueChange={(value) => setFormData((previousData) => ({ ...previousData, free: value }))}
                     options={[
@@ -599,6 +611,9 @@ const CreateEvents = () => {
                       { value: "0", label: t("events.create.eventTypes.paid", "Paid") },
                     ]}
                   />
+                  {isEditing && (
+                    <p className="text-xs text-muted-foreground">Event type cannot be changed after creation.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -608,7 +623,7 @@ const CreateEvents = () => {
                     value={formData.currency}
                     onValueChange={(value) => setFormData((previousData) => ({ ...previousData, currency: value }))}
                     options={["NGN", "USD"]}
-                    disabled={formData.free === "1"}
+                    disabled={formData.free === "1" || isEditing}
                   />
                 </div>
 
