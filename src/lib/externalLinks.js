@@ -44,7 +44,7 @@ export const normalizeYouTubeEmbedUrl = (value) => {
   return nextValue;
 };
 
-export const DEFAULT_PRIVACY_POLICY_URL = "https://konn3ct.ng";
+export const DEFAULT_PRIVACY_POLICY_URL = "https://landing.konn3ct.ng/privacy";
 
 export const getPrivacyPolicyUrl = (customUrl) => {
   const raw = readEnv(customUrl) || readEnv(process.env.REACT_APP_PRIVACY_POLICY_URL);
@@ -53,7 +53,11 @@ export const getPrivacyPolicyUrl = (customUrl) => {
   }
   const normalizedDomain = raw.replace(/konn3ct\.com/gi, "konn3ct.ng");
   const withProtocol = /^https?:\/\//i.test(normalizedDomain) ? normalizedDomain : `https://${normalizedDomain}`;
-  return withProtocol.replace(/\/+$/, "");
+  const clean = withProtocol.replace(/\/+$/, "");
+  if (clean === "https://konn3ct.ng" || clean === "https://konn3ct.ng/privacy") {
+    return DEFAULT_PRIVACY_POLICY_URL;
+  }
+  return clean;
 };
 
 export const privacyPolicyUrl = getPrivacyPolicyUrl();

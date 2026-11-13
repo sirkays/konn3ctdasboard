@@ -267,20 +267,28 @@ describe("externalLinks meeting join and event URL helpers", () => {
   });
 
   describe("privacyPolicyUrl helpers", () => {
-    it("defaults to https://konn3ct.ng when env is not set", () => {
-      expect(DEFAULT_PRIVACY_POLICY_URL).toBe("https://konn3ct.ng");
-      expect(getPrivacyPolicyUrl()).toBe("https://konn3ct.ng");
-      expect(getPrivacyPolicyUrl("")).toBe("https://konn3ct.ng");
+    it("defaults to https://landing.konn3ct.ng/privacy when env is not set", () => {
+      expect(DEFAULT_PRIVACY_POLICY_URL).toBe("https://landing.konn3ct.ng/privacy");
+      expect(getPrivacyPolicyUrl()).toBe("https://landing.konn3ct.ng/privacy");
+      expect(getPrivacyPolicyUrl("")).toBe("https://landing.konn3ct.ng/privacy");
     });
 
-    it("uses REACT_APP_PRIVACY_POLICY_URL when set", () => {
+    it("falls back to https://landing.konn3ct.ng/privacy for legacy root or broken endpoints", () => {
+      process.env.REACT_APP_PRIVACY_POLICY_URL = "https://konn3ct.ng";
+      expect(getPrivacyPolicyUrl()).toBe("https://landing.konn3ct.ng/privacy");
+
       process.env.REACT_APP_PRIVACY_POLICY_URL = "https://konn3ct.ng/privacy";
-      expect(getPrivacyPolicyUrl()).toBe("https://konn3ct.ng/privacy");
+      expect(getPrivacyPolicyUrl()).toBe("https://landing.konn3ct.ng/privacy");
+    });
+
+    it("uses custom REACT_APP_PRIVACY_POLICY_URL when set", () => {
+      process.env.REACT_APP_PRIVACY_POLICY_URL = "https://landing.konn3ct.ng/privacy";
+      expect(getPrivacyPolicyUrl()).toBe("https://landing.konn3ct.ng/privacy");
     });
 
     it("normalizes legacy konn3ct.com to konn3ct.ng in privacy policy URL", () => {
-      process.env.REACT_APP_PRIVACY_POLICY_URL = "https://konn3ct.com/privacy";
-      expect(getPrivacyPolicyUrl()).toBe("https://konn3ct.ng/privacy");
+      process.env.REACT_APP_PRIVACY_POLICY_URL = "https://custom.konn3ct.com/privacy-terms";
+      expect(getPrivacyPolicyUrl()).toBe("https://custom.konn3ct.ng/privacy-terms");
     });
   });
 

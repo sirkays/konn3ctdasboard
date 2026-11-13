@@ -90,7 +90,7 @@ export default function Register() {
           <p className="mt-8 text-center text-xs leading-5 text-muted-foreground">
             {t("auth.termsPrefix")}{" "}
             <a
-              href={privacyPolicyUrl}
+              href={privacyPolicyUrl || "https://landing.konn3ct.ng/privacy"}
               className="font-medium text-[#207450] underline underline-offset-2 dark:text-green-300"
               rel="noreferrer"
               target="_blank"
