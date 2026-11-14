@@ -6,7 +6,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import React, { useState, useContext } from "react";
-import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, CalendarDays, KeyRound } from "lucide-react";
+import { LogOut, X, Menu, Search, Bell, Moon, Sun, ChevronLeft, ChevronRight, CalendarDays /* , KeyRound */ } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
@@ -43,7 +43,7 @@ import VideoIcon from "./assets/components/VideoIcon";
 // import StreamIcon from "./assets/components/StreamIcon";
 // import AddonIcon from "./assets/components/AddonIcon";
 import RefereeIcon from "./assets/components/RefereeIcon";
-import DonationIcon from "./assets/components/DonationIcon";
+// import DonationIcon from "./assets/components/DonationIcon";
 import SettingsIcon from "./assets/components/SettingsIcon";
 import AttendanceIcon from "./assets/components/AttendanceIcon";
 import UserIcon from "./assets/components/UserIcon";
@@ -99,18 +99,18 @@ export function AppSidebar({ isMobileMenuOpen, setIsMobileMenuOpen, isCollapsed,
     { titleKey: "app.sidebar.payments", url: "/payments", icon: CardIcon },
     // { titleKey: "app.sidebar.addons", url: "/addons", icon: AddonIcon },
     { titleKey: "app.sidebar.referees", fallback: "Referral List", url: "/referees", icon: RefereeIcon },
-    {
-      titleKey: "app.sidebar.donations",
-      url: "/donations",
-      icon: DonationIcon,
-    },
+    // {
+    //   titleKey: "app.sidebar.donations",
+    //   url: "/donations",
+    //   icon: DonationIcon,
+    // },
     {
       titleKey: "app.sidebar.attendance",
       url: "/attendance",
       icon: AttendanceIcon,
     },
     
-    { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
+    // { titleKey: "app.sidebar.apiTokens", url: "/api-tokens", icon: KeyRound },
     { titleKey: "app.sidebar.settings", url: "/settings", icon: SettingsIcon },
   ];
 
