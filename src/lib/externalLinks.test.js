@@ -22,6 +22,7 @@ import {
   extractRoomSlug,
   normalizeKonn3ctDomain,
   normalizeMeetingUrl,
+  resolveStartedMeetingUrl,
 } from "./externalLinks";
 
 describe("externalLinks meeting join and event URL helpers", () => {
@@ -482,5 +483,33 @@ describe("externalLinks meeting join and event URL helpers", () => {
       expect(extractRoomSlug("")).toBe("");
       expect(extractRoomSlug(null)).toBe("");
     });
+  });
+  describe("resolveStartedMeetingUrl", () => {
+    it("opens the URL returned by the start-meeting endpoint untouched (production meet.konn3ct.com)", () => {
+      const url = "https://meet.konn3ct.com/meeting/meetsamuel?t=abc.def";
+      expect(resolveStartedMeetingUrl(url)).toBe(url);
+    });
+
+    it("opens dev edge URLs untouched", () => {
+      const url = "https://meet.edge.konn3ct.net/meeting/meetsamuel?t=abc";
+      expect(resolveStartedMeetingUrl(url)).toBe(url);
+    });
+
+    it("extracts URL from markdown link", () => {
+      expect(resolveStartedMeetingUrl("[join](https://meet.konn3ct.com/meeting/x?t=1)")).toBe(
+        "https://meet.konn3ct.com/meeting/x?t=1"
+      );
+    });
+
+    it("still rewrites flag URLs", () => {
+      expect(resolveStartedMeetingUrl("https://k4.edge.konn3ct.net/join/room1")).toBe(
+        "https://edge.konn3ct.net/join/room1"
+      );
+    });
+  });
+
+  it("normalizeMeetingHost does not mangle konn3ct subdomains", () => {
+    expect(normalizeMeetingHost("https://meet.konn3ct.com/meeting/x")).toBe("https://meet.konn3ct.com/meeting/x");
+    expect(normalizeMeetingHost("https://www.konn3ct.com/join/x")).toBe("https://edge.konn3ct.net/join/x");
   });
 });

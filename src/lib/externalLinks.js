@@ -150,7 +150,27 @@ export const normalizeMeetingHost = (url) => {
   if (!url || typeof url !== "string") return "";
   return url
     .replace(/k4\.edge\.konn3ct\.net/gi, "edge.konn3ct.net")
-    .replace(/konn3ct\.(?:com|ng)/gi, "edge.konn3ct.net");
+    // Only rewrite the bare (or www.) legacy hosts. Subdomains such as
+    // meet.konn3ct.com are real meeting hosts and must be left untouched,
+    // otherwise they become non-existent hosts like meet.edge.konn3ct.net.
+    .replace(/(^|\/\/)(?:www\.)?konn3ct\.(?:com|ng)(?=[/:?#]|$)/gi, "$1edge.konn3ct.net");
+};
+
+// URL returned by the start-meeting endpoint is authoritative (it already
+// carries the correct host + session token for the environment), so open it
+// as-is. Only fall back to normalisation for empty/backend/flag URLs.
+export const resolveStartedMeetingUrl = (url, slug = "") => {
+  const raw = readEnv(url);
+  if (!raw) return normalizeMeetingUrl(raw, slug);
+
+  const markdownLinkMatch = raw.match(/\]\((https?:\/\/[^)]+)\)/);
+  const candidate = markdownLinkMatch?.[1] || raw;
+
+  if (/^https?:\/\//i.test(candidate) && !isBackendUrl(candidate) && !isFlagUrl(candidate)) {
+    return candidate;
+  }
+
+  return normalizeMeetingUrl(candidate, slug);
 };
 
 export const getFlagUrl = () => {

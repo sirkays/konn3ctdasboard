@@ -26,7 +26,7 @@ import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle,
 } from "../components/ui/sheet";
 import { Tooltip as ReactTooltip } from "react-tooltip";
-import { buildRoomJoinUrl, normalizeMeetingUrl } from "../lib/externalLinks";
+import { buildRoomJoinUrl, resolveStartedMeetingUrl } from "../lib/externalLinks";
 
 const SCHEDULE_PANEL_TOP_OFFSET = "80px";
 const ROOM_LOCK_TOOLTIP_ID = "room-lock-tooltip";
@@ -162,7 +162,7 @@ const Rooms = () => {
   const startMeetingMutation = useMutation({
     mutationFn: startMeeting,
     onSuccess: (res, id) => {
-      const meetingUrl = normalizeMeetingUrl(res?.data?.url);
+      const meetingUrl = resolveStartedMeetingUrl(res?.data?.url);
       if (!meetingUrl) {
         toast({ variant: "destructive", description: t("rooms.toasts.meetingStartedMissingUrl") });
         return;
